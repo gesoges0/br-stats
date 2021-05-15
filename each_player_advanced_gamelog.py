@@ -12,7 +12,7 @@ from utils import get_mysql_pass, get_soup_by_url
 from typing import Any, List
 
 from all_players import AllPlayersRecord
-from each_player_overview import PerGameRecord
+from each_player_overview import PerGameRecordRegularSeason
 import time
 from datetime import datetime
 
@@ -104,7 +104,7 @@ class RegularSeasonTable():
             stats = {k: v for k, v in zip(keys_dict[len(_td_list)], _td_list)}
             stats['id'] = self.id
             stats['_Season'] = self.season
-            stats['_Rk'] = _Rk
+        
             # スタッツが空白対策
             del_target_set = set()
             for stats_type, stats_val in stats.items():
@@ -142,7 +142,7 @@ class PlayoffsTable():
             stats = {k: v for k, v in zip(keys_dict[len(_td_list)], _td_list)}
             stats['id'] = self.id
             stats['_Season'] = self.season
-            stats['_Rk'] = _Rk
+            
             # stats['_Date'] = datetime(year=int(stats['_Date'].split('-')[0]), month=int(stats['_Date'].split('-')[1]), day=int(stats['_Date'].split('-')[2]))
             # スタッツが空白対策
             del_target_set = set()
@@ -161,7 +161,6 @@ class RegularSeasonAdvancedRecord(Base):
     __tablename__ = f'each_player_gamelog_advanced_regular_season_{OPTION}'
     id = Column(Integer, primary_key=True)
     _Season = Column(String(120), primary_key=True)
-    _Rk = Column(Integer)
     _G = Column(Integer)
     _Date = Column(String(16), primary_key=True)
     _Age = Column(String(120))
@@ -190,7 +189,6 @@ class PlayoffsAdvancedRecord(Base):
     __tablename__ = f'each_player_gamelog_advanced_playoffs_{OPTION}'
     id = Column(Integer, primary_key=True)
     _Season = Column(String(120), primary_key=True)
-    _Rk = Column(Integer)
     _G = Column(Integer)
     _Date = Column(String(16), primary_key=True)
     _Age = Column(String(120))
@@ -220,7 +218,7 @@ class PlayoffsAdvancedRecord(Base):
 if __name__ == '__main__':
     for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
         # tm が異なってもGameLogには1シーズン情報で出てくるので.first()でOK
-        for res in session.query(distinct(PerGameRecord._Season)).filter(PerGameRecord.id == index).all():
+        for res in session.query(distinct(PerGameRecordRegularSeason._Season)).filter(PerGameRecordRegularSeason.id == index).all():
             _Season = res[0]
             year = str(int(_Season.split('-')[0]) + 1 )
             game_log_url = player_overview_url.replace('.html', f'/gamelog-advanced/{year}')

@@ -23,9 +23,10 @@ DATABASE = f'mysql://{USER}:{PASSWD}@{HOST}/{DB_NAME}?charset=utf8'
 ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
 session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
 
-OPTION = 2020 # 2019-2020
+OPTION = 'all_times' # 2019-2020
 
 keys_dict = { 28: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS', '_GmSc'],
+            27: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS'],
             19: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_FT', '_FTA', '_FT_percent', '_TRB', '_AST', '_PF', '_PTS'], 
             23: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_PF', '_PTS'],
             29: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS', '_GmSc', '_PlusMinus'],
@@ -52,7 +53,7 @@ class EachPlayerGameLogPage():
 
     def update_each_player_gamelog_tables(self):
         # chromiumでスクレイピング
-        soup = get_soup_by_url(self.url, False)
+        soup = get_soup_by_url(self.url, True)
         # table_soups = soup.find_all('tbody')
         
         # get tables
@@ -63,21 +64,32 @@ class EachPlayerGameLogPage():
         if all_pgl_basic_soup:
             regular_season_table_soup = all_pgl_basic_soup.find('tbody')
             regular_season_table = RegularSeasonTable(self.id, self.season, regular_season_table_soup)
-            for regular_season_record in regular_season_table.get_records():
-                if not session.query(RegularSeasonRecord.id, RegularSeasonRecord._Season, RegularSeasonRecord._Date).filter(RegularSeasonRecord.id == regular_season_record.id, RegularSeasonRecord._Season == regular_season_record._Season, RegularSeasonRecord._Date == regular_season_record._Date).first():
-                    session.add(regular_season_record)
-                    session.commit()
-                    
+            
+            try:
+                for regular_season_record in regular_season_table.get_records():
+                    if not session.query(RegularSeasonRecord.id, RegularSeasonRecord._Season, RegularSeasonRecord._Date).filter(RegularSeasonRecord.id == regular_season_record.id, RegularSeasonRecord._Season == regular_season_record._Season, RegularSeasonRecord._Date == regular_season_record._Date).first():
+                        session.add(regular_season_record)
+                        session.flush()
+                session.commit()
+            except:
+                session.rollback()
+            
+                        
         # playoffs
         div_pgl_basic_playoffs_soup = soup.find(id='div_pgl_basic_playoffs')
         if div_pgl_basic_playoffs_soup:
             playoffs_table_soup = div_pgl_basic_playoffs_soup.find('tbody')
             playoffs_table = PlayoffsTable(self.id, self.season, playoffs_table_soup)
-            for playoffs_record in playoffs_table.get_records():
-                if not session.query(PlayoffsRecord.id, PlayoffsRecord._Season, PlayoffsRecord._Date).filter(PlayoffsRecord.id == playoffs_record.id, PlayoffsRecord._Season == playoffs_record._Season, PlayoffsRecord._Date == playoffs_record._Date).first():
-                    session.add(playoffs_record)
-                    session.commit()
-
+            
+            try:
+                for playoffs_record in playoffs_table.get_records():
+                    if not session.query(PlayoffsRecord.id, PlayoffsRecord._Season, PlayoffsRecord._Date).filter(PlayoffsRecord.id == playoffs_record.id, PlayoffsRecord._Season == playoffs_record._Season, PlayoffsRecord._Date == playoffs_record._Date).first():
+                        session.add(playoffs_record)
+                        session.flush()
+                session.commit()
+            except:
+                session.rollback()
+            
 class RegularSeasonTable():
     table: Any
     id: int
@@ -103,7 +115,6 @@ class RegularSeasonTable():
             stats = {k: v for k, v in zip(keys_dict[len(_td_list)], _td_list)}
             stats['id'] = self.id
             stats['_Season'] = self.season
-            stats['_Rk'] = _Rk
             # スタッツが空白対策
             del_target_set = set()
             for stats_type, stats_val in stats.items():
@@ -141,7 +152,7 @@ class PlayoffsTable():
             stats = {k: v for k, v in zip(keys_dict[len(_td_list)], _td_list)}
             stats['id'] = self.id
             stats['_Season'] = self.season
-            stats['_Rk'] = _Rk
+
             # stats['_Date'] = datetime(year=int(stats['_Date'].split('-')[0]), month=int(stats['_Date'].split('-')[1]), day=int(stats['_Date'].split('-')[2]))
             # スタッツが空白対策
             del_target_set = set()
@@ -157,10 +168,9 @@ class PlayoffsTable():
 
 
 class RegularSeasonRecord(Base):
-    __tablename__ = f'each_player_gamelog_regular_season_{OPTION}'
+    __tablename__ = f'each_player_gamelog_regular_season_{OPTION}_3'
     id = Column(Integer, primary_key=True)
     _Season = Column(String(120), primary_key=True)
-    _Rk = Column(Integer)
     _G = Column(Integer)
     _Date = Column(String(16), primary_key=True)
     _Age = Column(String(120))
@@ -192,10 +202,10 @@ class RegularSeasonRecord(Base):
     _PlusMinus = Column(Integer)
 
 class PlayoffsRecord(Base):
-    __tablename__ = f'each_player_gamelog_playoffs_{OPTION}'
+    __tablename__ = f'each_player_gamelog_playoffs_{OPTION}_3'
     id = Column(Integer, primary_key=True)
     _Season = Column(String(120), primary_key=True)
-    _Rk = Column(Integer)
+
     _G = Column(Integer)
     _Date = Column(String(16), primary_key=True)
     _Age = Column(String(120))
@@ -228,14 +238,22 @@ class PlayoffsRecord(Base):
 
 if __name__ == '__main__':
     for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
+
+        # if index < 3996:#3437:#2506:#1686:#1403:     
+        #     continue
+
+        if index != 3996:
+            continue
+        
+
         # tm が異なってもGameLogには1シーズン情報で出てくるので.first()でOK
         for res in session.query(distinct(PerGameRecordRegularSeason._Season)).filter(PerGameRecordRegularSeason.id == index).all():
             _Season = res[0]
             year = str(int(_Season.split('-')[0]) + 1 )
             game_log_url = player_overview_url.replace('.html', f'/gamelog/{year}')
 
-            if int(year) != OPTION: # 2019-20
-                continue
+            # if int(year) != OPTION: # 2019-20
+            #     continue
 
             # if _player != 'Jason Tytum':
             #     continue
@@ -243,8 +261,8 @@ if __name__ == '__main__':
             each_player_game_log_page = EachPlayerGameLogPage(index, _Season, game_log_url)
             
             # create table
-            each_player_game_log_page.create_tables('regular_season')
-            each_player_game_log_page.create_tables('playoffs')
+            # each_player_game_log_page.create_tables('regular_season')
+            # each_player_game_log_page.create_tables('playoffs')
 
             # update table
             each_player_game_log_page.update_each_player_gamelog_tables()
