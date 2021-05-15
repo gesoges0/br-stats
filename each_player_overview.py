@@ -16,12 +16,12 @@ import time
 
 Base = declarative_base()
 USER, PASSWD = get_mysql_pass()
-DB_NAME = 'NBA_overview'
+DB_NAME = 'NBA_overview_test'
 DATABASE = f'mysql://{USER}:{PASSWD}@{HOST}/{DB_NAME}?charset=utf8'
 ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
 session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
 
-
+CURRENT_SEASON = "2020-21"
 
 class EachPlayerOverViewPage():
     id: int
@@ -45,7 +45,15 @@ class EachPlayerOverViewPage():
         soup = get_soup_by_url(self.url, False)
         # table_soups = soup.find_all('tbody')
         
+        # CURRENT_SEASON は更新が入るため一旦削除
+        session.query(PerGameRecordRegularSeason).filter(PerGameRecordRegularSeason.id == self.id, PerGameRecordRegularSeason._Season == CURRENT_SEASON).delete()
+        session.query(PerGameRecordPlayOffs).filter(PerGameRecordPlayOffs.id == self.id, PerGameRecordPlayOffs._Season == CURRENT_SEASON).delete()
+        session.query(TotalsRecordRegularSeason).filter(TotalsRecordRegularSeason.id == self.id, TotalsRecordRegularSeason._Season == CURRENT_SEASON).delete()
+        session.query(TotalsRecordPlayOffs).filter(TotalsRecordPlayOffs.id == self.id, TotalsRecordPlayOffs._Season == CURRENT_SEASON).delete()
+        session.commit()
+        
         # per game
+        # regular season
         per_game_soup = soup.find('div', id='div_per_game')
         if per_game_soup:
             per_games_table_soup = per_game_soup.find('tbody')
@@ -54,7 +62,8 @@ class EachPlayerOverViewPage():
                 if not session.query(PerGameRecordRegularSeason.id, PerGameRecordRegularSeason._Season).filter(PerGameRecordRegularSeason.id == per_game_record.id, PerGameRecordRegularSeason._Season == per_game_record._Season, PerGameRecordRegularSeason._Tm == per_game_record._Tm).first():
                     session.add(per_game_record)
                     session.commit()
-        
+
+        # playoffs
         playoff_soup = soup.find('div', id='div_playoffs_per_game')
         if playoff_soup:
             per_games_table_soup = playoff_soup.find('tbody')
@@ -66,6 +75,7 @@ class EachPlayerOverViewPage():
                     session.commit()
                 
         # totals
+        # regular season
         per_game_soup = soup.find('div', id='div_totals')
         if per_game_soup:
             totals_table_soup = per_game_soup.find('tbody')
@@ -75,6 +85,7 @@ class EachPlayerOverViewPage():
                     session.add(totals_record)
                     session.commit()
         
+        # playoffs
         playoffs_soup = soup.find('div', id='div_playoffs_totals')
         if playoffs_soup:
             totals_table_soup = playoffs_soup.find('tbody')
