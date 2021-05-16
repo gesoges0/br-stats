@@ -15,6 +15,7 @@ from all_players import AllPlayersRecord
 from each_player_overview import PerGameRecordRegularSeason
 import time
 from datetime import datetime
+import os
 
 Base = declarative_base()
 USER, PASSWD = get_mysql_pass()
@@ -23,7 +24,9 @@ DATABASE = f'mysql://{USER}:{PASSWD}@{HOST}/{DB_NAME}?charset=utf8'
 ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
 session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
 
-OPTION = 'all_times' # 2019-2020
+OPTION = 'all_times' 
+CURRENT_SEASON = '2020-21' # 2020-2021
+
 
 keys_dict = { 28: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS', '_GmSc'],
             27: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS'],
@@ -168,7 +171,7 @@ class PlayoffsTable():
 
 
 class RegularSeasonRecord(Base):
-    __tablename__ = f'each_player_gamelog_regular_season_{OPTION}_3'
+    __tablename__ = f'each_player_gamelog_regular_season_{OPTION}_union'
     id = Column(Integer, primary_key=True)
     _Season = Column(String(120), primary_key=True)
     _G = Column(Integer)
@@ -202,7 +205,7 @@ class RegularSeasonRecord(Base):
     _PlusMinus = Column(Integer)
 
 class PlayoffsRecord(Base):
-    __tablename__ = f'each_player_gamelog_playoffs_{OPTION}_3'
+    __tablename__ = f'each_player_gamelog_playoffs_{OPTION}_union'
     id = Column(Integer, primary_key=True)
     _Season = Column(String(120), primary_key=True)
 
@@ -237,14 +240,23 @@ class PlayoffsRecord(Base):
     _PlusMinus = Column(Integer)
 
 if __name__ == '__main__':
+
+    # dt_now = datetime.now().strftime('%Y%m%d')
+    # ROOT = Path('/mnt/da1fb3ab-8bd1-4b98-983e-b45899e50c48/ChromeCache/') / dt_now
+    # if not ROOT.exists():
+    #     os.mkdir(ROOT)
+    #     index_dir = 0
+    # else: 
+    #     index_dir = len(os.listdi r(ROOT))
+    # TMPDIR = ROOT / str(index_dir)
+    # if not TMPDIR.exists():
+    #     os.mkdir(TMPDIR)
+    # os.environ['TMPDIR'] = str(TMPDIR)
+
     for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
 
         # if index < 3996:#3437:#2506:#1686:#1403:     
         #     continue
-
-        if index != 3996:
-            continue
-        
 
         # tm が異なってもGameLogには1シーズン情報で出てくるので.first()でOK
         for res in session.query(distinct(PerGameRecordRegularSeason._Season)).filter(PerGameRecordRegularSeason.id == index).all():
@@ -252,8 +264,8 @@ if __name__ == '__main__':
             year = str(int(_Season.split('-')[0]) + 1 )
             game_log_url = player_overview_url.replace('.html', f'/gamelog/{year}')
 
-            # if int(year) != OPTION: # 2019-20
-            #     continue
+            if _Season != CURRENT_SEASON:
+                continue
 
             # if _player != 'Jason Tytum':
             #     continue
@@ -266,3 +278,11 @@ if __name__ == '__main__':
 
             # update table
             each_player_game_log_page.update_each_player_gamelog_tables()
+        
+        # num_tmp_dir_files = len(os.path)
+        # if len(os.listdir(TMPDIR)) >= 100:
+        #     index_dir += 1
+        #     TMPDIR = ROOT / str(index_dir)
+        #     if not TMPDIR.exists():
+        #         os.mkdir(TMPDIR)
+        #     os.environ['TMPDIR'] = str(TMPDIR)
