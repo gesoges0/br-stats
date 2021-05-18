@@ -18,20 +18,25 @@ from datetime import datetime
 
 Base = declarative_base()
 USER, PASSWD = get_mysql_pass()
+DB_NAME = 'NBA_gamelog'
 DATABASE = f'mysql://{USER}:{PASSWD}@{HOST}/{DB_NAME}?charset=utf8'
 ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
 session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
+OPTION = 'all_times' # 2020-21
+CURRENT_SEASON = '2020-21'
 
-OPTION = 2021 # 2020-21
-# OPTION = None
 
 keys_dict = {
             16: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_TS_percent', '_ORB_percent', '_DRB_percent', '_TRB_percent', '_AST_percent', '_ORtg', '_DRtg'],
             18: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_TS_percent', '_ORB_percent', '_DRB_percent', '_TRB_percent', '_AST_percent', '_STL_percent', '_BLK_percent', '_ORtg', '_DRtg'],
+            19: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_TS_percent', '_eFG_percent', '_ORB_percent', '_DRB_percent', '_TRB_percent', '_AST_percent', '_TOV_percent', '_USG_percent', '_ORtg', '_DRtg'],
+            20: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_TS_percent', '_ORB_percent', '_DRB_percent', '_TRB_percent', '_AST_percent', '_STL_percent', '_BLK_percent', '_TOV_percent', '_USG_percent', '_ORtg', '_DRtg'],
             21: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_TS_percent', '_ORB_percent', '_DRB_percent', '_TRB_percent', '_AST_percent', '_STL_percent', '_BLK_percent', '_TOV_percent', '_USG_percent', '_ORtg', '_DRtg', '_GmSc'],
             22: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_TS_percent', '_eFG_percent', '_ORB_percent', '_DRB_percent', '_TRB_percent', '_AST_percent', '_STL_percent', '_BLK_percent', '_TOV_percent', '_USG_percent', '_ORtg', '_DRtg', '_GmSc'],
             23: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_TS_percent', '_eFG_percent', '_ORB_percent', '_DRB_percent', '_TRB_percent', '_AST_percent', '_STL_percent', '_BLK_percent', '_TOV_percent', '_USG_percent', '_ORtg', '_DRtg', '_GmSc', '_BPM'], 
             8: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL']}
+# 19はあとから足したので怪しいかも
+
 
 class EachPlayerAdvancedGameLogPage():
     id: int
@@ -158,7 +163,7 @@ class PlayoffsTable():
 
 
 class RegularSeasonAdvancedRecord(Base):
-    __tablename__ = f'each_player_gamelog_advanced_regular_season_{OPTION}'
+    __tablename__ = f'each_player_gamelog_advanced_regular_season_{OPTION}_union'
     id = Column(Integer, primary_key=True)
     _Season = Column(String(120), primary_key=True)
     _G = Column(Integer)
@@ -186,7 +191,7 @@ class RegularSeasonAdvancedRecord(Base):
     _BPM = Column(Float)
 
 class PlayoffsAdvancedRecord(Base):
-    __tablename__ = f'each_player_gamelog_advanced_playoffs_{OPTION}'
+    __tablename__ = f'each_player_gamelog_advanced_playoffs_{OPTION}_union'
     id = Column(Integer, primary_key=True)
     _Season = Column(String(120), primary_key=True)
     _G = Column(Integer)
@@ -216,15 +221,17 @@ class PlayoffsAdvancedRecord(Base):
 
 
 if __name__ == '__main__':
+
+
     for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
+
         # tm が異なってもGameLogには1シーズン情報で出てくるので.first()でOK
         for res in session.query(distinct(PerGameRecordRegularSeason._Season)).filter(PerGameRecordRegularSeason.id == index).all():
             _Season = res[0]
             year = str(int(_Season.split('-')[0]) + 1 )
             game_log_url = player_overview_url.replace('.html', f'/gamelog-advanced/{year}')
 
-            # シーズンで収集
-            if int(year) != OPTION: # 2019-20
+            if _Season != CURRENT_SEASON:
                 continue
 
             # 選手で収集
@@ -234,8 +241,8 @@ if __name__ == '__main__':
             each_player_advanced_game_log_page = EachPlayerAdvancedGameLogPage(index, _Season, game_log_url)
             
             # create table
-            each_player_advanced_game_log_page.create_tables('regular_season')
-            each_player_advanced_game_log_page.create_tables('playoffs')
+            # each_player_advanced_game_log_page.create_tables('regular_season')
+            # each_player_advanced_game_log_page.create_tables('playoffs')
 
             # update table
             each_player_advanced_game_log_page.update_each_player_advanced_gamelog_tables()
