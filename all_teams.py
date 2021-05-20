@@ -54,6 +54,8 @@ class TeamPage():
         # session.query(TotalsRecord).filter(TotalsRecord._Season == CURRENT_SEASON).delete()
         # session.query(Per36MinutesRecord).filter(Per36MinutesRecord._Season == CURRENT_SEASON).delete()
         # session.query(Per100PossRecord).filter(Per100PossRecord._Season == CURRENT_SEASON).delete()
+        # session.query(AdvancedRecord).filter(AdvancedRecord._Season == CURRENT_SEASON).delete()
+        # session.query(PlayByPlayRecord).filter(PlayByPlayRecord._Season == CURRENT_SEASON).delete()
         # session.commit()
         
         # # team info
@@ -183,7 +185,12 @@ class TeamPage():
                 session.commit()                
 
         # # Play by Play
-        # play_by_play_soup = soup.find('div', id='div_pbp').find('tbody')
+        play_by_play_soup = soup.find('div', id='div_pbp').find('tbody')
+        play_by_play_table = PlayByPlayTable(play_by_play_soup, self.season, self.team)
+        for record in play_by_play_table.get_records():
+            if not session.query(PlayByPlayRecord).filter(PlayByPlayRecord._Season==record._Season, PlayByPlayRecord._abbreviation==record._abbreviation, PlayByPlayRecord._PositionEstimate__Player==record._PositionEstimate__Player).all():
+                session.add(record)
+                session.commit()
 
 # 基本情報
 class TeamInfoRecord(Base):
@@ -946,45 +953,56 @@ class PlayByPlayTable:
     table_soup: Any
     season: str
     team: Team
-    _keys = ['__PositionEstimate__Player', '__PositionEstimate__Age', '__PositionEstimate__G', '__PositionEstimate__MP', '__PositionEstimate__PG_percent', '__PositionEstimate__SG_percent', '__PositionEstimate__SF_percent', '__PositionEstimate__PF_percent', '__PositionEstimate__C_percent','__PlusMinus_Per_100_Poss__OnCourt', '__PlusMinus_Per_100_Poss__OnOff', '__Turnovers__BadPass', '__Turnovers__LostBall', '__Fouls_Committed__Shoot', '__Fouls_Committed__Off', '__Fouls_Drawn__Shoot', '__Fouls_Drawn__Off', '__Misc__PGA', '__Misc__And1', '__Misc__Blkd']
-    position_rate_keys = {'__PositionEstimate__PG_percent', '__PositionEstimate__SG_percent', '__PositionEstimate__SF_percent', '__PositionEstimate__PF_percent', '__PositionEstimate__C_percent'}
+    _keys = ['_PositionEstimate__Player', '_PositionEstimate__Age', 
+            '_PositionEstimate__G', '_PositionEstimate__MP', 
+            '_PositionEstimate__PG_percent', '_PositionEstimate__SG_percent', '_PositionEstimate__SF_percent', '_PositionEstimate__PF_percent', '_PositionEstimate__C_percent',
+            '_PlusMinus_Per_100_Poss__OnCourt', '_PlusMinus_Per_100_Poss__OnOff', 
+            '_Turnovers__BadPass', '_Turnovers__LostBall', 
+            '_Fouls_Committed__Shoot', '_Fouls_Committed__Off', 
+            '_Fouls_Drawn__Shoot', '_Fouls_Drawn__Off', 
+            '_Misc__PGA', '_Misc__And1', '_Misc__Blkd']
     def get_records(self):
         for _tr in self.table_soup.find_all('tr'):
-            td_list = [_.text for _ in _tr.find_all('td')]
+            td_list = [_.text.replace('%', '') for _ in _tr.find_all('td')]
+            if not td_list:
+                continue
             info = {k: v for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
-            info['_created_at'] = time.strtime('%a-%b-%d')
-            record = AdvancedRecord(info.__dict__.items())
+            del_target_set = set()
+            for k, v in info.items():
+                if v!=0. and not v:
+                    del_target_set.add(k)
+            for k in del_target_set:
+                del info[k]
+            record = PlayByPlayRecord(**info)
             yield record
     
 class PlayByPlayRecord(Base):
     __tablename__ = f'team_stats__play_by_play'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
-    __PositionEstimate__Player = Column(String(120))
-    __PositionEstimate__Age = Column(Integer)
-    __PositionEstimate__G = Column(Integer)
-    __PositionEstimate__MP = Column(Integer)
-    __PositionEstimate__PG_percent = Column(Integer)
-    __PositionEstimate__SG_percent = Column(Integer)
-    __PositionEstimate__SF_percent = Column(Integer)
-    __PositionEstimate__PF_percent =Column(Integer)
-    __PositionEstimate__C_percent = Column(Integer)
-    __PlusMinus_Per_100_Poss__OnCourt = Column(Float) 
-    __PlusMinus_Per_100_Poss__OnOff = Column(Float)
-    __Turnovers__BadPass = Column(Integer)
-    __Turnovers__LostBall = Column(Integer)
-    __Fouls_Committed__Shoot = Column(Integer)
-    __Fouls_Committed__Off = Column(Integer)
-    __Fouls_Drawn__Shoot = Column(Integer)
-    __Fouls_Drawn__Off = Column(Integer)
-    __Misc__PGA = Column(Integer)
-    __Misc__And1 = Column(Integer) 
-    __Misc__Blkd = Column(Integer)
-    _created_at = Column(String(120), primary_key=True)
-
-
+    _PositionEstimate__Player = Column(String(120), primary_key=True)
+    _PositionEstimate__Age = Column(Integer)
+    _PositionEstimate__G = Column(Integer)
+    _PositionEstimate__MP = Column(Integer)
+    _PositionEstimate__PG_percent = Column(Integer)
+    _PositionEstimate__SG_percent = Column(Integer)
+    _PositionEstimate__SF_percent = Column(Integer)
+    _PositionEstimate__PF_percent =Column(Integer)
+    _PositionEstimate__C_percent = Column(Integer)
+    _PlusMinus_Per_100_Poss__OnCourt = Column(Float) 
+    _PlusMinus_Per_100_Poss__OnOff = Column(Float)
+    _Turnovers__BadPass = Column(Integer)
+    _Turnovers__LostBall = Column(Integer)
+    _Fouls_Committed__Shoot = Column(Integer)
+    _Fouls_Committed__Off = Column(Integer)
+    _Fouls_Drawn__Shoot = Column(Integer)
+    _Fouls_Drawn__Off = Column(Integer)
+    _Misc__PGA = Column(Integer)
+    _Misc__And1 = Column(Integer) 
+    _Misc__Blkd = Column(Integer)
+    
 if __name__ == '__main__':
     _Season = 2021
     for team in TEAMS_SET:
