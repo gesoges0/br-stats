@@ -1006,10 +1006,10 @@ class PlayByPlayRecord(Base):
 if __name__ == '__main__':
     _Season = 2021
     for team in TEAMS_SET:
-        if team.abbreviation == "HOU":
-            team_page = TeamPage(team, _Season)
-            team_page.create_table()
-            team_page.update_latest_records()
+    
+        team_page = TeamPage(team, _Season)
+        team_page.create_table()
+        team_page.update_latest_records()
 
 
 
