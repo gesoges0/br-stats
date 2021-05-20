@@ -12,18 +12,18 @@ from utils import get_mysql_pass, get_soup_by_url, get_teams_set
 from typing import Any, List
 
 from all_players import AllPlayersRecord
-from each_player_overview import PerGameRecord
+from each_player_overview import PerGameRecordRegularSeason
 import time
+from dataclasses import dataclass
 
 from datetime import datetime
-
 from utils import Team
 
 keys_dict = {23: ['_Team', '_G', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_2P', '_2PA', '_2P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS']}
 
 Base = declarative_base()
 USER, PASSWD = get_mysql_pass()
-DB_NAME = 'NBA4'
+DB_NAME = 'NBA_teams'
 DATABASE = f'mysql://{USER}:{PASSWD}@{HOST}/{DB_NAME}?charset=utf8'
 ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
 session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
@@ -31,110 +31,147 @@ session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=EN
 OPTION = 2021 # 2020-21 season
 
 TEAMS_SET = get_teams_set()
-
-# @dataclass
-# class Team:
-#     team_name: str
-#     abbreviation: str
-#     coference: str
-
-def insert_with_update_at(tmp_class):
-    ts = now 
-    tmp_class['update_at'] = ts
-    session.add(tmp_class)
-    session.commit()
-
-def insert_with_created_at(tmp_class):
-    ts = now 
-    tmp_class['created_at'] = ts
-    tmp_class['updated_at'] = ts
-    session.add(tmp_class)
-    session.commit()
-
-
+NOW = datetime.now()
 
 class TeamPage():
     season: int
     url: str
     team: Team
 
-    def __init__(self, team: Team, season: str):
+    def __init__(self, team: Team, season: int):
         self.season = season
         self.team = team
-        self.url = f'https://www.basketball-reference.com/teams/{self.team}/{self.season}.html'
+        self.url = f'https://www.basketball-reference.com/teams/{self.team.abbreviation}/{self.season}.html'
 
     def create_table(self):
         Base.metadata.create_all(bind=ENGINE)
 
     def update_latest_records(self):
-        teams_set = get_teams_set()
         soup = get_soup_by_url(self.url, True)
 
-        # team info
-        team_logo_url = soup.find('img', class_ = 'teamlogo').get('src')
-        team_info_record = TeamInfoRecord(self.team.season, self.team.abbreviation, self.team.conference, team_logo_url)
+        # # team info
+        # # 更新なし
+        # team_logo_link = soup.find('img', class_ = 'teamlogo').get('src')
+        # team_info_dict = {'_abbreviation': self.team.abbreviation, '_name': self.team.team_name, '_conference': self.team.coference, '_logo_link': team_logo_link}
+        # team_info_record = TeamInfoRecord(**team_info_dict)
+        # if not session.query(TeamInfoRecord).filter(TeamInfoRecord._abbreviation == team_info_record._abbreviation).all():
+        #     session.add(team_info_record)
+        #     session.commit()
 
-        # roster record 
-        roster_table_soup = soup.find('table', id = 'roster').find('tbody')
-        roster_table = RosterTable(roster_table_soup, self.season, self.team)
-        for record: RosterRecord in roster_table.get_records():
-            if not session.query(RosterRecord).filter(RosterRecord._Season==record._Season, RosterRecord._abbreviation==record._abbreviation, RosterRecord._Player==record._Player):
-                session.add(record)
-                session.commit()
-                
-        # injury report
-        injury_report_soup = soup.find('div', id='div_injuries').find('tbody')
-        injury_report_table = InjuryReportTable(injury_report_soup, self.season, self.team)
-        for injury_record in injury_report_table.get_records():
-            if injury_record not in hogehoge:
-                insert injury_record
-
-        # Team and Opponent Stats
-        team_and_opponent_stats_soup_list = soup.find('div', id='div_team_and_opponent').find_all('tbody')
-        team_stats_soup = team_and_opponent_stats_soup_list[0]
-        opponent_stats_soup = team_and_opponent_stats_soup_list[1]
-        team_stats_table = TeamAndOpponentStatsTable(team_stats_soup, self.season, self.team)
-        team_record, team_g_record, lg_rank_record, year_year_record = team_stats_table.get_records()
-        if team_record not in hogehoge:
-            insert team_record
         
+        # # roster record 
+        # # created_atがあるため更新則はこのまま
+        # いなくなった選手はPerGameとの差分で分かる
+        # roster_table_soup = soup.find('table', id = 'roster').find('tbody')
+        # roster_table = RosterTable(roster_table_soup, self.season, self.team)
+        # for record in roster_table.get_records():
+        #     # not exists
+        #     if not session.query(RosterRecord).filter(RosterRecord._Season==record._Season, RosterRecord._abbreviation==record._abbreviation, RosterRecord._Player==record._Player).all():
+        #         session.add(record)
+        #         session.commit()
 
-        opponent_stats_table = TeamAndOpponentStatsTable(opponent_stats_soup, self.season, self.team)
-        team_record, team_g_record, lg_rank_record, year_year_record = opponent_stats_table.get_records()
 
+        # injury report
+        # # created_atがあるため更新則はこのまま
+        # injury report が無い場合があるのでtry
+        # try:
+        #     injury_report_soup = soup.find('div', id='div_injuries').find('tbody')
+        #     injury_report_table = InjuryReportTable(injury_report_soup, self.season, self.team)
+        #     for record in injury_report_table.get_records():
+        #         if not session.query(InjuryReportRecord).filter(InjuryReportRecord._Season==record._Season, InjuryReportRecord._abbreviation==record._abbreviation, InjuryReportRecord._Player==record._Player, InjuryReportRecord._Update==record._Update).all():
+        #             session.add(record)
+        #             session.commit()
+        # except:
+        #     pass
+            
+        # ==========================================================================================
 
+        # # Team and Opponent Stats
+        # # created_atがあるため更新則はこのまま
+        # team_and_opponent_stats_soup_list = soup.find('div', id='div_team_and_opponent').find_all('tbody')
+        # # 上4行（自チーム）
+        # team_stats_soup = team_and_opponent_stats_soup_list[0]
+        # team_stats_table = TeamAndOpponentStatsTable(team_stats_soup, self.season, self.team, False)
+        # team_record, team_g_record, lg_rank_record, year_year_record = team_stats_table.get_records()
+        # if not session.query(TeamAndOpponentStatsTeamRecord).filter(TeamAndOpponentStatsTeamRecord._Season==team_record._Season, TeamAndOpponentStatsTeamRecord._abbreviation==team_record._abbreviation, TeamAndOpponentStatsTeamRecord._created_at==team_record._created_at).all():
+        #     session.add(team_record)
+        # if not session.query(TeamAndOpponentStatsTeamGRecord).filter(TeamAndOpponentStatsTeamGRecord._Season==team_g_record._Season, TeamAndOpponentStatsTeamGRecord._abbreviation==team_g_record._abbreviation, TeamAndOpponentStatsTeamGRecord._created_at==team_g_record._created_at).all():
+        #     session.add(team_g_record)
+        # if not session.query(TeamAndOpponentStatsLgRankRecord).filter(TeamAndOpponentStatsLgRankRecord._Season==lg_rank_record._Season, TeamAndOpponentStatsLgRankRecord._abbreviation==lg_rank_record._abbreviation, TeamAndOpponentStatsLgRankRecord._created_at==lg_rank_record._created_at).all():
+        #     session.add(lg_rank_record)
+        # if not session.query(TeamAndOpponentStatsYearYearRecord).filter(TeamAndOpponentStatsYearYearRecord._Season==year_year_record._Season, TeamAndOpponentStatsYearYearRecord._abbreviation==year_year_record._abbreviation, TeamAndOpponentStatsYearYearRecord._created_at==year_year_record._created_at).all():
+        #     session.add(year_year_record)
+        # session.commit()
+        
+        # # 下4行（自チームに対する相手のレート）
+        # # コチラ側はほぼ上のコピペで大丈夫
+        # opponent_stats_soup = team_and_opponent_stats_soup_list[1]
+        # opponent_stats_table = TeamAndOpponentStatsTable(opponent_stats_soup, self.season, self.team, True)
+        # team_record, team_g_record, lg_rank_record, year_year_record = opponent_stats_table.get_records()
+        # if not session.query(TeamAndOpponentStatsOpponentRecord).filter(TeamAndOpponentStatsOpponentRecord._Season==team_record._Season, TeamAndOpponentStatsOpponentRecord._abbreviation==team_record._abbreviation, TeamAndOpponentStatsOpponentRecord._created_at==team_record._created_at).all():
+        #     session.add(team_record)
+        # if not session.query(TeamAndOpponentStatsOpponentGRecord).filter(TeamAndOpponentStatsOpponentGRecord._Season==team_g_record._Season, TeamAndOpponentStatsOpponentGRecord._abbreviation==team_g_record._abbreviation, TeamAndOpponentStatsOpponentGRecord._created_at==team_g_record._created_at).all():
+        #     session.add(team_g_record)
+        # if not session.query(TeamAndOpponentStatsLgRankRecord_Opponent).filter(TeamAndOpponentStatsLgRankRecord_Opponent._Season==lg_rank_record._Season, TeamAndOpponentStatsLgRankRecord_Opponent._abbreviation==lg_rank_record._abbreviation, TeamAndOpponentStatsLgRankRecord_Opponent._created_at==lg_rank_record._created_at).all():
+        #     session.add(lg_rank_record)
+        # if not session.query(TeamAndOpponentStatsYearYearRecord_Opponent).filter(TeamAndOpponentStatsYearYearRecord_Opponent._Season==year_year_record._Season, TeamAndOpponentStatsYearYearRecord_Opponent._abbreviation==year_year_record._abbreviation, TeamAndOpponentStatsYearYearRecord_Opponent._created_at==year_year_record._created_at).all():
+        #     session.add(year_year_record)
+        # session.commit()
+        
+        # # Team Misc
+        # # created_atがあるため更新則はこのまま
+        # team_misc_soup = soup.find('div', id='div_team_misc').find('tbody')
+        # team_misc_table = TeamMiscTable(team_misc_soup, self.season, self.team)
+        # team_misc_team_record, team_misc_lg_rank_record = team_misc_table.get_records()
+        # if not session.query(TeamMiscTeamRecord).filter(TeamMiscTeamRecord._Season==team_misc_team_record._Season, TeamMiscTeamRecord._abbreviation==team_misc_team_record._abbreviation, TeamMiscTeamRecord._created_at==team_misc_team_record._created_at).all():
+        #     session.add(team_misc_team_record)
+        # if not session.query(TeamMiscLgRankRecord).filter(TeamMiscLgRankRecord._Season==team_misc_lg_rank_record._Season, TeamMiscLgRankRecord._abbreviation==team_misc_lg_rank_record._abbreviation, TeamMiscLgRankRecord._created_at==team_misc_lg_rank_record._created_at).all():
+        #     session.add(team_misc_lg_rank_record)
+        # session.commit()
 
-        # Team Misc
-        team_misc_soup = soup.find('div', id='div_team_misc').find('tbody')
-        team_misc_table = TeamMiscTable(team_misc_soup)
+        # ==========================================================================================
 
-        # PerGame
-        per_game_soup = soup.find('div', id='all_per_game').find('tbody')
-        per_game_table = PerGameTable(per_game_soup)
+        # # PerGame
+        # # 最初に更新すべき _Season, _abbreviation, _Player を消してから
+        # per_game_soup = soup.find('div', id='all_per_game').find('tbody')
+        # per_game_table = PerGameTable(per_game_soup, self.season, self.team)
+        # for record in per_game_table.get_records():
+        #     if not session.query(PerGameRecord).filter(PerGameRecord._Season==record._Season, PerGameRecord._abbreviation==record._abbreviation, PerGameRecord._Player==record._Player).all():
+        #         print(record.__dict__.items())
+        #         session.add(record)
+        #         session.commit()
+
+        # ==========================================================================================
 
         # Totals
+        # # 最初に更新すべき _Season, _abbreviation, _Player を消してから
         totals_soup = soup.find('div', id='div_totals').find('tbody')
-        totals_table = TotalsTable(totals_soup)
+        totals_table = TotalsTable(totals_soup, self.season, self.team)
+        for record in totals_table.get_records():
+            if not session.query(TotalsRecord).filter(TotalsRecord._Season==record._Season, TotalsRecord._abbreviation==record._abbreviation, TotalsRecord._Player==record._Player).all():
+                print(record.__dict__.items())
+                session.add(record)
+                session.commit()
 
-        # Per 36 Minutes
-        per_36_minutes_soup = soup.find('div', id='div_per_minutes').find('tbody')
+        # # Per 36 Minutes
+        # per_36_minutes_soup = soup.find('div', id='div_per_minutes').find('tbody')
 
-        # Per 100 poss
-        per_100_poss_soup = soup.find('div', id='div_per_poss').find('tbody')
+        # # Per 100 poss
+        # per_100_poss_soup = soup.find('div', id='div_per_poss').find('tbody')
 
-        # Advanced
-        advanced_soup = soup.find('div', id='div_advanced').find('tbody')
+        # # Advanced
+        # advanced_soup = soup.find('div', id='div_advanced').find('tbody')
 
-        # Play by Play
-        play_by_play_soup = soup.find('div', id='div_pbp').find('tbody')
+        # # Play by Play
+        # play_by_play_soup = soup.find('div', id='div_pbp').find('tbody')
 
 # 基本情報
 class TeamInfoRecord(Base):
-    __tablename__ = f'team_stats'
-    _name = Column(String(120))
+    __tablename__ = f'team_stats__info'
     _abbreviation = Column(String(120), primary_key=True)
+    _name = Column(String(120))
     _conference = Column(String(4))
-    _logo_url = Column(String(120))
+    _logo_link = Column(String(120))
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ロスター情報
@@ -147,23 +184,28 @@ class RosterTable:
     team: Team
     _keys = ['_Player', '_Pos', '_Ht', '_Wt', '_BirthDate', '_CountryCode', '_Exp', '_College']
     
-    def __init__(self, soup):
+    def __init__(self, soup, season, team):
         self.table_soup = soup
+        self.season = season
+        self.team = team
 
     def get_records(self):
+        def _clean(k, v):
+            if k == '_Player':
+                return v.replace('(TW)', '')
+            return v
         for  _tr in self.table_soup.find_all('tr'):
             _No = _tr.find('th').text
             td_list = [_.text for _ in _tr.find_all('td')]
-            info = {k:v for k, v in zip(self._keys, td_list)}
+            info = {k:_clean(k, v) for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
             info['_No'] = _No
-            info['_created_at'] = time.strtime('%a-%b-%d')
-            record = RosterRecord(info.__dict__.items())
+            record = RosterRecord(**info)
             yield record
 
 class RosterRecord(Base):
-    __tablename__ = f'team_stats_members_{OPTION}'
+    __tablename__ = f'team_stats__roster'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
     _No = Column(String(16)) # 2つ以上背番号を持つ選手用に
@@ -173,9 +215,8 @@ class RosterRecord(Base):
     _Wt = Column(Integer)
     _BirthDate = Column(String(120)) # Date型にしたい
     _CountryCode = Column(String(16)) # usなど
-    _Experience = Column(Integer) # Rは謎
+    _Exp = Column(String(4)) # Rは謎
     _College = Column(String(120))
-    _created_at = Column(String(120))
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Injury 情報
@@ -193,23 +234,22 @@ class InjuryReportTable:
     def get_records(self):
         for _tr in self.table_soup.find_all('tr'):
             _Player = _tr.find('th').find('a').text
-            td_list = [_ for _ in _tr.find_all('td')]
+            td_list = [_.text for _ in _tr.find_all('td')]
             info = {k: v for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_Player'] = _Player
             info['_abbreviation'] = self.team.abbreviation
-            info['_created_at'] = time.strtime('%a-%b-%d')
-            record = InjuryReportRecord(info.__dict__.items())
+            record = InjuryReportRecord(**info)
             yield record
 
 class InjuryReportRecord(Base):
-    __tablename__ = f'team_stats_injury_reports_{OPTION}'
+    __tablename__ = f'team_stats__injury_reports'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
-    _Player = Column(String(120))
+    _Player = Column(String(120), primary_key=True)
     _Team = Column(String(120))
-    _Update = Column(String(120))
-    _Description = Column(String(120))
+    _Update = Column(String(120), primary_key=True)
+    _Description = Column(String(256))
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Team and Opponent Stats
@@ -218,37 +258,57 @@ class TeamAndOpponentStatsTable:
     table_soup: Any
     season: str
     team: Team
-    _keys = ['_G', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_2P', '_2PA', '_2P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS']    
+    is_opponent: bool
+    _keys = ['_G', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_2P', '_2PA', '_2P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS']
 
     def get_records(self):
-        def _get_info(td_list, year_year_flag=False):
-            info = {k: v for k, v in zip(self.team_and_opponent_stats_keys, td_list)}
-            if year_year_flag:
-                info = {k: v.replace('%', '') for k, v in zip(self._keys, td_list)}
+        def _get_info(td_list, is_team_row=False):
+            info = {k: v.replace('%', '').replace('+', '') for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
-            info['_created_at'] = time.strtime('%a-%b-%d')
+            info['_created_at'] = NOW.strftime('%Y-%m-%d')
+            if not is_team_row:
+                del info['_G']
             return info
 
-        tr_list = self.table_soup.find_all('tr')
-        Team_row, Team_G_row, Lg_Rank_row, Year_Year_row = tr_list
-        # Team
-        info = _get_info([_ for _ in Team_row.find_all('td')])
-        team_record = TeamAndOpponentStatsTeamRecord(info.__dict__.items())
-        # Team/G
-        info = _get_info([_ for _ in Team_G_row.find_all('td')])
-        team_g_record = TeamAndOpponentStatsLgRankRecord(info.__dict__.items())
-        # Lg Rank
-        info = _get_info([_ for _ in Lg_Rank_row.find_all('td')])
-        lg_rank_record = TeamAndOpponentStatsYearYearRecord(info.__dict__.items())
-        # Year/Year
-        info = _get_info([_ for _ in Year_Year_row.find_all('td')])
-        year_year_record = TeamAndOpponentStatsYearYearRecord(info.__dict__.items())
-        # 各チーム1行ずつのみなので yield ではなく return を使う
-        return team_record, team_g_record, lg_rank_record, year_year_record
-        
+        if not self.is_opponent:
+            tr_list = self.table_soup.find_all('tr')
+            Team_row, Team_G_row, Lg_Rank_row, Year_Year_row = tr_list
+            # Team
+            info = _get_info([_.text for _ in Team_row.find_all('td')], True)
+            team_record = TeamAndOpponentStatsTeamRecord(**info)
+            # Team/G
+            info = _get_info([_.text for _ in Team_G_row.find_all('td')])
+            team_g_record = TeamAndOpponentStatsTeamGRecord(**info)
+            # Lg Rank
+            info = _get_info([_.text for _ in Lg_Rank_row.find_all('td')])
+            lg_rank_record = TeamAndOpponentStatsLgRankRecord(**info)
+            # Year/Year
+            info = _get_info([_.text for _ in Year_Year_row.find_all('td')])
+            year_year_record = TeamAndOpponentStatsYearYearRecord(**info)
+            # 各チーム1行ずつのみなので yield ではなく return を使う
+            return team_record, team_g_record, lg_rank_record, year_year_record
+        else:
+            tr_list = self.table_soup.find_all('tr')
+            Opponent_row, Opponent_G_row, Lg_Rank_row, Year_Year_row = tr_list
+            # Opponent
+            info = _get_info([_.text for _ in Opponent_row.find_all('td')], True)
+            opponent_record = TeamAndOpponentStatsOpponentRecord(**info)
+            # Opponent/G
+            info = _get_info([_.text for _ in Opponent_G_row.find_all('td')])
+            opponent_g_record = TeamAndOpponentStatsOpponentGRecord(**info)
+            # Lg Rank
+            info = _get_info([_.text for _ in Lg_Rank_row.find_all('td')])
+            lg_rank_record = TeamAndOpponentStatsLgRankRecord_Opponent(**info)
+            # Year/Year
+            info = _get_info([_.text for _ in Year_Year_row.find_all('td')])
+            year_year_record = TeamAndOpponentStatsYearYearRecord_Opponent(**info)
+            # 各チーム1行ずつのみなので yield ではなく return を使う
+            return opponent_record, opponent_g_record, lg_rank_record, year_year_record
+
+# 1
 class TeamAndOpponentStatsTeamRecord(Base):
-    __tablename__ = f'team_stats_team_and_opponent_stats__Team__{OPTION}'
+    __tablename__ = f'team_stats__team_and_opponent_stats__Team'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
     _G = Column(Integer)
@@ -276,11 +336,12 @@ class TeamAndOpponentStatsTeamRecord(Base):
     _PTS = Column(Integer)
     _created_at = Column(String(120), primary_key=True)
 
+# 2
 class TeamAndOpponentStatsTeamGRecord(Base):
-    __tablename__ = f'team_stats_team_and_opponent_stats__Team_G__{OPTION}'
+    __tablename__ = f'team_stats__team_and_opponent_stats__Team_per_G'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
-    _G = Column(Integer)
+    # _G = Column(Integer)
     _MP  = Column(Float)
     _FG  = Column(Float)
     _FGA = Column(Float)
@@ -305,11 +366,12 @@ class TeamAndOpponentStatsTeamGRecord(Base):
     _PTS = Column(Float)
     _created_at = Column(String(120), primary_key=True)
 
+# 3
 class TeamAndOpponentStatsLgRankRecord(Base):
-    __tablename__ = f'team_stats_team_and_opponent_stats__Lg_Rank__{OPTION}'
+    __tablename__ = f'team_stats__team_and_opponent_stats__Lg_Rank'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
-    _G = Column(Integer)
+    # _G = Column(Integer)
     _MP  = Column(Integer)
     _FG  = Column(Integer)
     _FGA = Column(Integer)
@@ -334,11 +396,12 @@ class TeamAndOpponentStatsLgRankRecord(Base):
     _PTS = Column(Integer)
     _created_at = Column(String(120), primary_key=True)
 
+# 4
 class TeamAndOpponentStatsYearYearRecord(Base):
-    __tablename__ = f'team_stats_team_and_opponent_stats__Year_Year__{OPTION}'
+    __tablename__ = f'team_stats__team_and_opponent_stats__Year_per_Year'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
-    _G = Column(Float)
+    # _G = Column(Float)
     _MP  = Column(Float)
     _FG  = Column(Float)
     _FGA = Column(Float)
@@ -362,10 +425,133 @@ class TeamAndOpponentStatsYearYearRecord(Base):
     _PF = Column(Float)
     _PTS = Column(Float)
     _created_at = Column(String(120), primary_key=True)
-    
+
+
+
+# 1
+class TeamAndOpponentStatsOpponentRecord(Base):
+    __tablename__ = f'team_stats__team_and_opponent_stats__Opponent'
+    _Season = Column(String(120), primary_key=True)
+    _abbreviation = Column(String(120), primary_key=True)
+    _G = Column(Integer)
+    _MP  = Column(Integer)
+    _FG  = Column(Integer)
+    _FGA = Column(Integer)
+    _FG_percent  = Column(Float)
+    _3P = Column(Integer)
+    _3PA = Column(Integer)
+    _3P_percent = Column(Float)
+    _2P = Column(Integer)
+    _2PA = Column(Integer)
+    _2P_percent = Column(Float)
+    _FT = Column(Integer)
+    _FTA = Column(Integer)
+    _FT_percent = Column(Float)
+    _ORB = Column(Integer)
+    _DRB = Column(Integer)
+    _TRB = Column(Integer)
+    _AST = Column(Integer)
+    _STL = Column(Integer)
+    _BLK = Column(Integer)
+    _TOV = Column(Integer)
+    _PF = Column(Integer)
+    _PTS = Column(Integer)
+    _created_at = Column(String(120), primary_key=True)
+
+# 2
+class TeamAndOpponentStatsOpponentGRecord(Base):
+    __tablename__ = f'team_stats__team_and_opponent_stats__Opponent_per_G'
+    _Season = Column(String(120), primary_key=True)
+    _abbreviation = Column(String(120), primary_key=True)
+    # _G = Column(Integer)
+    _MP  = Column(Float)
+    _FG  = Column(Float)
+    _FGA = Column(Float)
+    _FG_percent  = Column(Float)
+    _3P = Column(Float)
+    _3PA = Column(Float)
+    _3P_percent = Column(Float)
+    _2P = Column(Float)
+    _2PA = Column(Float)
+    _2P_percent = Column(Float)
+    _FT = Column(Float)
+    _FTA = Column(Float)
+    _FT_percent = Column(Float)
+    _ORB = Column(Float)
+    _DRB = Column(Float)
+    _TRB = Column(Float)
+    _AST = Column(Float)
+    _STL = Column(Float)
+    _BLK = Column(Float)
+    _TOV = Column(Float)
+    _PF = Column(Float)
+    _PTS = Column(Float)
+    _created_at = Column(String(120), primary_key=True)
+
+# 3
+class TeamAndOpponentStatsLgRankRecord_Opponent(Base):
+    __tablename__ = f'team_stats__team_and_opponent_stats__Lg_Rank__Opponent'
+    _Season = Column(String(120), primary_key=True)
+    _abbreviation = Column(String(120), primary_key=True)
+    # _G = Column(Integer)
+    _MP  = Column(Integer)
+    _FG  = Column(Integer)
+    _FGA = Column(Integer)
+    _FG_percent  = Column(Integer)
+    _3P = Column(Integer)
+    _3PA = Column(Integer)
+    _3P_percent = Column(Integer)
+    _2P = Column(Integer)
+    _2PA = Column(Integer)
+    _2P_percent = Column(Integer)
+    _FT = Column(Integer)
+    _FTA = Column(Integer)
+    _FT_percent = Column(Integer)
+    _ORB = Column(Integer)
+    _DRB = Column(Integer)
+    _TRB = Column(Integer)
+    _AST = Column(Integer)
+    _STL = Column(Integer)
+    _BLK = Column(Integer)
+    _TOV = Column(Integer)
+    _PF = Column(Integer)
+    _PTS = Column(Integer)
+    _created_at = Column(String(120), primary_key=True)
+
+# 4
+class TeamAndOpponentStatsYearYearRecord_Opponent(Base):
+    __tablename__ = f'team_stats__team_and_opponent_stats__Year_per_Year__Opponent'
+    _Season = Column(String(120), primary_key=True)
+    _abbreviation = Column(String(120), primary_key=True)
+    # _G = Column(Float)
+    _MP  = Column(Float)
+    _FG  = Column(Float)
+    _FGA = Column(Float)
+    _FG_percent  = Column(Float)
+    _3P = Column(Float)
+    _3PA = Column(Float)
+    _3P_percent = Column(Float)
+    _2P = Column(Float)
+    _2PA = Column(Float)
+    _2P_percent = Column(Float)
+    _FT = Column(Float)
+    _FTA = Column(Float)
+    _FT_percent = Column(Float)
+    _ORB = Column(Float)
+    _DRB = Column(Float)
+    _TRB = Column(Float)
+    _AST = Column(Float)
+    _STL = Column(Float)
+    _BLK = Column(Float)
+    _TOV = Column(Float)
+    _PF = Column(Float)
+    _PTS = Column(Float)
+    _created_at = Column(String(120), primary_key=True)
+
+
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @dataclass
-class TeamMisc:
+class TeamMiscTable:
     table_soup: Any
     season: str
     team: Team
@@ -376,21 +562,21 @@ class TeamMisc:
             info = {k: v for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
-            info['_created_at'] = time.strtime('%a-%b-%d')
+            info['_created_at'] = NOW.strftime('%Y-%m-%d')
             return info
         
         tr_list = self.table_soup.find_all('tr')
         team_row, lg_rank_row = tr_list
         info = _get_info([_.text for _ in team_row.find_all('td')])
-        team_misc_team_record = TeamMiscTeamRecord(info.__dict__.items())
+        team_misc_team_record = TeamMiscTeamRecord(**info)
         
         info = _get_info([_.text for _ in lg_rank_row.find_all('td')])
-        team_misc_lg_rank_record = TeamMiscLgRankRecord(info.__dict__.items())
+        team_misc_lg_rank_record = TeamMiscLgRankRecord(**info)
 
         return team_misc_team_record, team_misc_lg_rank_record
 
 class TeamMiscTeamRecord(Base):
-    __tablename__ = f'team_stats_team_misc_team_{OPTION}'
+    __tablename__ = f'team_stats__team_misc__team'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
     _W = Column(Integer)
@@ -419,7 +605,7 @@ class TeamMiscTeamRecord(Base):
 
 
 class TeamMiscLgRankRecord(Base):
-    __tablename__ = f'team_stats_team_misc_lg_rank_{OPTION}'
+    __tablename__ = f'team_stats__team_misc__lg_rank'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
     _W = Column(Integer)
@@ -460,16 +646,21 @@ class PerGameTable:
             info = {k: v for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
-            info['_created_at'] = time.strtime('%a-%b-%d')
-            record = PerGameRecord(info.__dict__.items())
+            del_target_set = set()
+            for k, v in info.items():
+                if not v:
+                    del_target_set.add(k)
+            for k in del_target_set:
+                del info[k]
+            record = PerGameRecord(**info)
             yield record
 
 # _Rk は関係ない
 class PerGameRecord(Base):
-    __tablename__ = f'team_stats_per_game_{OPTION}'
+    __tablename__ = f'team_stats__per_game'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
-    _Player = Column(String(120))
+    _Player = Column(String(120), primary_key=True)
     _Age = Column(Integer)
     _G = Column(Integer)
     _GS = Column(Integer)
@@ -496,7 +687,6 @@ class PerGameRecord(Base):
     _TOV = Column(Float)
     _PF = Column(Float)
     _PTS_G = Column(Float)
-    _created_at = Column(String(120), primary_key=True)
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @dataclass
@@ -512,15 +702,14 @@ class TotalsTable:
             info = {k: v for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
-            info['_created_at'] = time.strtime('%a-%b-%d')
-            record = TotalsRecord(info.__dict__.items())
+            record = TotalsRecord(**info)
             yield record
 
 class TotalsRecord(Base):
-    __tablename__ = f'team_stats_totals_{OPTION}'
+    __tablename__ = f'team_stats__totals'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
-    _Player = Column(String(120))
+    _Player = Column(String(120), primary_key=True)
     _Age = Column(Integer)
     _G = Column(Integer)
     _GS = Column(Integer)
@@ -547,7 +736,6 @@ class TotalsRecord(Base):
     _TOV = Column(Integer)
     _PF = Column(Integer)
     _PTS = Column(Integer)
-    _created_at = Column(String(120), primary_key=True)
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @dataclass
@@ -568,7 +756,7 @@ class Per36MinutesTable:
             yield record
 
 class Per36MinutesRecord(Base):
-    __tablename__ = f'team_stats_per36_minutes_{OPTION}'
+    __tablename__ = f'team_stats__per36_minutes'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
     _Player = Column(String(120))
@@ -620,7 +808,7 @@ class Per100PossTable:
             yield record
 
 class Per100PossRecord(Base):
-    __tablename__ = f'team_stats_per100_poss_{OPTION}'
+    __tablename__ = f'team_stats__per100_poss'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
     _Player = Column(String(120))
@@ -675,7 +863,7 @@ class AdvancedTable:
             yield record
 
 class AdvancedRecord(Base):
-    __tablename__ = f'team_stats_advanced_{OPTION}'
+    __tablename__ = f'team_stats__advanced'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
     _Player = Column(String(120))
@@ -715,7 +903,7 @@ class PlayByPlayTable:
     def get_records(self):
         for _tr in self.table_soup.find_all('tr'):
             td_list = [_.text for _ in _tr.find_all('td')]
-            info = {k: v if k  not in for k, v in zip(self._keys, td_list)}
+            info = {k: v for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
             info['_created_at'] = time.strtime('%a-%b-%d')
@@ -723,7 +911,7 @@ class PlayByPlayTable:
             yield record
     
 class PlayByPlayRecord(Base):
-    __tablename__ = f'team_stats_play_by_play_{OPTION}'
+    __tablename__ = f'team_stats__play_by_play'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
     __PositionEstimate__Player = Column(String(120))
@@ -750,14 +938,17 @@ class PlayByPlayRecord(Base):
 
 
 if __name__ == '__main__':
+    _Season = 2021
     for team in TEAMS_SET:
-        member_page = MemberPage(team, OPTION)
+        team_page = TeamPage(team, _Season)
 
+        team_page.create_table()
+        team_page.update_latest_records()
 
 
 
     
-    for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
-        # tm が異なってもGameLogには1シーズン情報で出てくるので.first()でOK
-        for res in session.query(distinct(PerGameRecord._Season)).filter(PerGameRecord.id == index).all():
-            _Season = res[0]
+    # for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
+    #     # tm が異なってもGameLogには1シーズン情報で出てくるので.first()でOK
+    #     for res in session.query(distinct(PerGameRecord._Season)).filter(PerGameRecord.id == index).all():
+    #         _Season = res[0]
