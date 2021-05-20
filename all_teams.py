@@ -141,23 +141,25 @@ class TeamPage():
         #         session.add(record)
         #         session.commit()
 
-        # ==========================================================================================
-
         # Totals
         # # 最初に更新すべき _Season, _abbreviation, _Player を消してから
-        totals_soup = soup.find('div', id='div_totals').find('tbody')
-        totals_table = TotalsTable(totals_soup, self.season, self.team)
-        for record in totals_table.get_records():
-            if not session.query(TotalsRecord).filter(TotalsRecord._Season==record._Season, TotalsRecord._abbreviation==record._abbreviation, TotalsRecord._Player==record._Player).all():
-                print(record.__dict__.items())
-                session.add(record)
-                session.commit()
+        # totals_soup = soup.find('div', id='div_totals').find('tbody')
+        # totals_table = TotalsTable(totals_soup, self.season, self.team)
+        # for record in totals_table.get_records():
+        #     if not session.query(TotalsRecord).filter(TotalsRecord._Season==record._Season, TotalsRecord._abbreviation==record._abbreviation, TotalsRecord._Player==record._Player).all():
+        #         session.add(record)
+        #         session.commit()
 
         # # Per 36 Minutes
-        # per_36_minutes_soup = soup.find('div', id='div_per_minutes').find('tbody')
+        # per_36_minutes_soup = soup.find('div', id='div_per_minute').find('tbody')
+        # per_36_minutes_table = Per36MinutesTable(per_36_minutes_soup, self.season, self.team)
+        # for record in per_36_minutes_table.get_records():
+        #     if not session.query(Per36MinutesRecord).filter(Per36MinutesRecord._Season==record._Season, Per36MinutesRecord._abbreviation==record._abbreviation, Per36MinutesRecord._Player==record._Player).all():
+        #         session.add(record)
+        #         session.commit()
 
         # # Per 100 poss
-        # per_100_poss_soup = soup.find('div', id='div_per_poss').find('tbody')
+        per_100_poss_soup = soup.find('div', id='div_per_poss').find('tbody')
 
         # # Advanced
         # advanced_soup = soup.find('div', id='div_advanced').find('tbody')
@@ -648,7 +650,7 @@ class PerGameTable:
             info['_abbreviation'] = self.team.abbreviation
             del_target_set = set()
             for k, v in info.items():
-                if not v:
+                if v!=0. and not v:
                     del_target_set.add(k)
             for k in del_target_set:
                 del info[k]
@@ -700,8 +702,16 @@ class TotalsTable:
         for _tr in self.table_soup.find_all('tr'):
             td_list = [_.text for _ in _tr.find_all('td')]
             info = {k: v for k, v in zip(self._keys, td_list)}
+            print("=============================================-")
+            print(info)
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
+            del_target_set = set()
+            for k, v in info.items():
+                if v!=0. and not v:
+                    del_target_set.add(k)
+            for k in del_target_set:
+                del info[k]
             record = TotalsRecord(**info)
             yield record
 
@@ -743,7 +753,7 @@ class Per36MinutesTable:
     table_soup: Any
     season: str
     team: Team
-    _keys = ['_Player', '_Age', '_G', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_2P', '_2PA', '_2P_percent', '_eFG_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS']
+    _keys = ['_Player', '_Age', '_G', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_2P', '_2PA', '_2P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS']
 
     def get_records(self):
         for _tr in self.table_soup.find_all('tr'):
@@ -751,15 +761,20 @@ class Per36MinutesTable:
             info = {k: v for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
-            info['_created_at'] = time.strtime('%a-%b-%d')
-            record = Per36MinutesRecord(info.__dict__.items())
+            del_target_set = set()
+            for k, v in info.items():
+                if v!=0. and not v:
+                    del_target_set.add(k)
+            for k in del_target_set:
+                del info[k]
+            record = Per36MinutesRecord(**info)
             yield record
 
 class Per36MinutesRecord(Base):
     __tablename__ = f'team_stats__per36_minutes'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
-    _Player = Column(String(120))
+    _Player = Column(String(120), primary_key=True)
     _Age = Column(Integer)
     _G = Column(Integer)
     _GS = Column(Integer)
@@ -773,7 +788,6 @@ class Per36MinutesRecord(Base):
     _2P = Column(Float)
     _2PA = Column(Float)
     _2P_percent = Column(Float)
-    _eFG_percent = Column(Float)
     _FT = Column(Float)
     _FTA = Column(Float)
     _FT_percent = Column(Float)
@@ -786,7 +800,6 @@ class Per36MinutesRecord(Base):
     _TOV = Column(Float)
     _PF = Column(Float)
     _PTS = Column(Float)
-    _created_at = Column(String(120), primary_key=True)
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @dataclass
