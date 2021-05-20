@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from pathlib import Path
 from selenium.webdriver.chrome.options import Options
+from typing import NamedTuple
+import csv
 
 # import chromedriver_binary
 
@@ -36,4 +38,17 @@ def get_soup_by_url(url: str, selenium: bool):
         return soup
 
 
+class Team(NamedTuple):
+    team_name: str
+    abbreviation: str
+    coference: str
 
+def get_teams_set():
+    _teams_set = set()
+    with open('./data/team.csv', 'r') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            abbreviation, team_name, coference = row
+            team = Team(team_name, abbreviation, coference)
+            _teams_set.add(team)
+    return _teams_set
