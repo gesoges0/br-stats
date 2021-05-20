@@ -29,7 +29,7 @@ ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
 session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
 
 OPTION = 2021 # 2020-21 season
-
+CURRENT_SEASON = 2021
 TEAMS_SET = get_teams_set()
 NOW = datetime.now()
 
@@ -49,120 +49,138 @@ class TeamPage():
     def update_latest_records(self):
         soup = get_soup_by_url(self.url, True)
 
+        # 削除プロトコル
+        # session.query(PerGameRecord).filter(PerGameRecord._Season == CURRENT_SEASON).delete()
+        # session.query(TotalsRecord).filter(TotalsRecord._Season == CURRENT_SEASON).delete()
+        # session.query(Per36MinutesRecord).filter(Per36MinutesRecord._Season == CURRENT_SEASON).delete()
+        # session.query(Per100PossRecord).filter(Per100PossRecord._Season == CURRENT_SEASON).delete()
+        # session.commit()
+        
         # # team info
         # # 更新なし
-        # team_logo_link = soup.find('img', class_ = 'teamlogo').get('src')
-        # team_info_dict = {'_abbreviation': self.team.abbreviation, '_name': self.team.team_name, '_conference': self.team.coference, '_logo_link': team_logo_link}
-        # team_info_record = TeamInfoRecord(**team_info_dict)
-        # if not session.query(TeamInfoRecord).filter(TeamInfoRecord._abbreviation == team_info_record._abbreviation).all():
-        #     session.add(team_info_record)
-        #     session.commit()
+        team_logo_link = soup.find('img', class_ = 'teamlogo').get('src')
+        team_info_dict = {'_abbreviation': self.team.abbreviation, '_name': self.team.team_name, '_conference': self.team.coference, '_logo_link': team_logo_link}
+        team_info_record = TeamInfoRecord(**team_info_dict)
+        if not session.query(TeamInfoRecord).filter(TeamInfoRecord._abbreviation == team_info_record._abbreviation).all():
+            session.add(team_info_record)
+            session.commit()
 
         
         # # roster record 
         # # created_atがあるため更新則はこのまま
         # いなくなった選手はPerGameとの差分で分かる
-        # roster_table_soup = soup.find('table', id = 'roster').find('tbody')
-        # roster_table = RosterTable(roster_table_soup, self.season, self.team)
-        # for record in roster_table.get_records():
-        #     # not exists
-        #     if not session.query(RosterRecord).filter(RosterRecord._Season==record._Season, RosterRecord._abbreviation==record._abbreviation, RosterRecord._Player==record._Player).all():
-        #         session.add(record)
-        #         session.commit()
+        roster_table_soup = soup.find('table', id = 'roster').find('tbody')
+        roster_table = RosterTable(roster_table_soup, self.season, self.team)
+        for record in roster_table.get_records():
+            # not exists
+            if not session.query(RosterRecord).filter(RosterRecord._Season==record._Season, RosterRecord._abbreviation==record._abbreviation, RosterRecord._Player==record._Player).all():
+                session.add(record)
+                session.commit()
 
 
         # injury report
-        # # created_atがあるため更新則はこのまま
+        # created_atがあるため更新則はこのまま
         # injury report が無い場合があるのでtry
-        # try:
-        #     injury_report_soup = soup.find('div', id='div_injuries').find('tbody')
-        #     injury_report_table = InjuryReportTable(injury_report_soup, self.season, self.team)
-        #     for record in injury_report_table.get_records():
-        #         if not session.query(InjuryReportRecord).filter(InjuryReportRecord._Season==record._Season, InjuryReportRecord._abbreviation==record._abbreviation, InjuryReportRecord._Player==record._Player, InjuryReportRecord._Update==record._Update).all():
-        #             session.add(record)
-        #             session.commit()
-        # except:
-        #     pass
+        try:
+            injury_report_soup = soup.find('div', id='div_injuries').find('tbody')
+            injury_report_table = InjuryReportTable(injury_report_soup, self.season, self.team)
+            for record in injury_report_table.get_records():
+                if not session.query(InjuryReportRecord).filter(InjuryReportRecord._Season==record._Season, InjuryReportRecord._abbreviation==record._abbreviation, InjuryReportRecord._Player==record._Player, InjuryReportRecord._Update==record._Update).all():
+                    session.add(record)
+                    session.commit()
+        except:
+            pass
             
         # ==========================================================================================
 
         # # Team and Opponent Stats
         # # created_atがあるため更新則はこのまま
-        # team_and_opponent_stats_soup_list = soup.find('div', id='div_team_and_opponent').find_all('tbody')
+        team_and_opponent_stats_soup_list = soup.find('div', id='div_team_and_opponent').find_all('tbody')
         # # 上4行（自チーム）
-        # team_stats_soup = team_and_opponent_stats_soup_list[0]
-        # team_stats_table = TeamAndOpponentStatsTable(team_stats_soup, self.season, self.team, False)
-        # team_record, team_g_record, lg_rank_record, year_year_record = team_stats_table.get_records()
-        # if not session.query(TeamAndOpponentStatsTeamRecord).filter(TeamAndOpponentStatsTeamRecord._Season==team_record._Season, TeamAndOpponentStatsTeamRecord._abbreviation==team_record._abbreviation, TeamAndOpponentStatsTeamRecord._created_at==team_record._created_at).all():
-        #     session.add(team_record)
-        # if not session.query(TeamAndOpponentStatsTeamGRecord).filter(TeamAndOpponentStatsTeamGRecord._Season==team_g_record._Season, TeamAndOpponentStatsTeamGRecord._abbreviation==team_g_record._abbreviation, TeamAndOpponentStatsTeamGRecord._created_at==team_g_record._created_at).all():
-        #     session.add(team_g_record)
-        # if not session.query(TeamAndOpponentStatsLgRankRecord).filter(TeamAndOpponentStatsLgRankRecord._Season==lg_rank_record._Season, TeamAndOpponentStatsLgRankRecord._abbreviation==lg_rank_record._abbreviation, TeamAndOpponentStatsLgRankRecord._created_at==lg_rank_record._created_at).all():
-        #     session.add(lg_rank_record)
-        # if not session.query(TeamAndOpponentStatsYearYearRecord).filter(TeamAndOpponentStatsYearYearRecord._Season==year_year_record._Season, TeamAndOpponentStatsYearYearRecord._abbreviation==year_year_record._abbreviation, TeamAndOpponentStatsYearYearRecord._created_at==year_year_record._created_at).all():
-        #     session.add(year_year_record)
-        # session.commit()
+        team_stats_soup = team_and_opponent_stats_soup_list[0]
+        team_stats_table = TeamAndOpponentStatsTable(team_stats_soup, self.season, self.team, False)
+        team_record, team_g_record, lg_rank_record, year_year_record = team_stats_table.get_records()
+        if not session.query(TeamAndOpponentStatsTeamRecord).filter(TeamAndOpponentStatsTeamRecord._Season==team_record._Season, TeamAndOpponentStatsTeamRecord._abbreviation==team_record._abbreviation, TeamAndOpponentStatsTeamRecord._created_at==team_record._created_at).all():
+            session.add(team_record)
+        if not session.query(TeamAndOpponentStatsTeamGRecord).filter(TeamAndOpponentStatsTeamGRecord._Season==team_g_record._Season, TeamAndOpponentStatsTeamGRecord._abbreviation==team_g_record._abbreviation, TeamAndOpponentStatsTeamGRecord._created_at==team_g_record._created_at).all():
+            session.add(team_g_record)
+        if not session.query(TeamAndOpponentStatsLgRankRecord).filter(TeamAndOpponentStatsLgRankRecord._Season==lg_rank_record._Season, TeamAndOpponentStatsLgRankRecord._abbreviation==lg_rank_record._abbreviation, TeamAndOpponentStatsLgRankRecord._created_at==lg_rank_record._created_at).all():
+            session.add(lg_rank_record)
+        if not session.query(TeamAndOpponentStatsYearYearRecord).filter(TeamAndOpponentStatsYearYearRecord._Season==year_year_record._Season, TeamAndOpponentStatsYearYearRecord._abbreviation==year_year_record._abbreviation, TeamAndOpponentStatsYearYearRecord._created_at==year_year_record._created_at).all():
+            session.add(year_year_record)
+        session.commit()
         
         # # 下4行（自チームに対する相手のレート）
         # # コチラ側はほぼ上のコピペで大丈夫
-        # opponent_stats_soup = team_and_opponent_stats_soup_list[1]
-        # opponent_stats_table = TeamAndOpponentStatsTable(opponent_stats_soup, self.season, self.team, True)
-        # team_record, team_g_record, lg_rank_record, year_year_record = opponent_stats_table.get_records()
-        # if not session.query(TeamAndOpponentStatsOpponentRecord).filter(TeamAndOpponentStatsOpponentRecord._Season==team_record._Season, TeamAndOpponentStatsOpponentRecord._abbreviation==team_record._abbreviation, TeamAndOpponentStatsOpponentRecord._created_at==team_record._created_at).all():
-        #     session.add(team_record)
-        # if not session.query(TeamAndOpponentStatsOpponentGRecord).filter(TeamAndOpponentStatsOpponentGRecord._Season==team_g_record._Season, TeamAndOpponentStatsOpponentGRecord._abbreviation==team_g_record._abbreviation, TeamAndOpponentStatsOpponentGRecord._created_at==team_g_record._created_at).all():
-        #     session.add(team_g_record)
-        # if not session.query(TeamAndOpponentStatsLgRankRecord_Opponent).filter(TeamAndOpponentStatsLgRankRecord_Opponent._Season==lg_rank_record._Season, TeamAndOpponentStatsLgRankRecord_Opponent._abbreviation==lg_rank_record._abbreviation, TeamAndOpponentStatsLgRankRecord_Opponent._created_at==lg_rank_record._created_at).all():
-        #     session.add(lg_rank_record)
-        # if not session.query(TeamAndOpponentStatsYearYearRecord_Opponent).filter(TeamAndOpponentStatsYearYearRecord_Opponent._Season==year_year_record._Season, TeamAndOpponentStatsYearYearRecord_Opponent._abbreviation==year_year_record._abbreviation, TeamAndOpponentStatsYearYearRecord_Opponent._created_at==year_year_record._created_at).all():
-        #     session.add(year_year_record)
-        # session.commit()
+        opponent_stats_soup = team_and_opponent_stats_soup_list[1]
+        opponent_stats_table = TeamAndOpponentStatsTable(opponent_stats_soup, self.season, self.team, True)
+        team_record, team_g_record, lg_rank_record, year_year_record = opponent_stats_table.get_records()
+        if not session.query(TeamAndOpponentStatsOpponentRecord).filter(TeamAndOpponentStatsOpponentRecord._Season==team_record._Season, TeamAndOpponentStatsOpponentRecord._abbreviation==team_record._abbreviation, TeamAndOpponentStatsOpponentRecord._created_at==team_record._created_at).all():
+            session.add(team_record)
+        if not session.query(TeamAndOpponentStatsOpponentGRecord).filter(TeamAndOpponentStatsOpponentGRecord._Season==team_g_record._Season, TeamAndOpponentStatsOpponentGRecord._abbreviation==team_g_record._abbreviation, TeamAndOpponentStatsOpponentGRecord._created_at==team_g_record._created_at).all():
+            session.add(team_g_record)
+        if not session.query(TeamAndOpponentStatsLgRankRecord_Opponent).filter(TeamAndOpponentStatsLgRankRecord_Opponent._Season==lg_rank_record._Season, TeamAndOpponentStatsLgRankRecord_Opponent._abbreviation==lg_rank_record._abbreviation, TeamAndOpponentStatsLgRankRecord_Opponent._created_at==lg_rank_record._created_at).all():
+            session.add(lg_rank_record)
+        if not session.query(TeamAndOpponentStatsYearYearRecord_Opponent).filter(TeamAndOpponentStatsYearYearRecord_Opponent._Season==year_year_record._Season, TeamAndOpponentStatsYearYearRecord_Opponent._abbreviation==year_year_record._abbreviation, TeamAndOpponentStatsYearYearRecord_Opponent._created_at==year_year_record._created_at).all():
+            session.add(year_year_record)
+        session.commit()
         
         # # Team Misc
         # # created_atがあるため更新則はこのまま
-        # team_misc_soup = soup.find('div', id='div_team_misc').find('tbody')
-        # team_misc_table = TeamMiscTable(team_misc_soup, self.season, self.team)
-        # team_misc_team_record, team_misc_lg_rank_record = team_misc_table.get_records()
-        # if not session.query(TeamMiscTeamRecord).filter(TeamMiscTeamRecord._Season==team_misc_team_record._Season, TeamMiscTeamRecord._abbreviation==team_misc_team_record._abbreviation, TeamMiscTeamRecord._created_at==team_misc_team_record._created_at).all():
-        #     session.add(team_misc_team_record)
-        # if not session.query(TeamMiscLgRankRecord).filter(TeamMiscLgRankRecord._Season==team_misc_lg_rank_record._Season, TeamMiscLgRankRecord._abbreviation==team_misc_lg_rank_record._abbreviation, TeamMiscLgRankRecord._created_at==team_misc_lg_rank_record._created_at).all():
-        #     session.add(team_misc_lg_rank_record)
-        # session.commit()
+        team_misc_soup = soup.find('div', id='div_team_misc').find('tbody')
+        team_misc_table = TeamMiscTable(team_misc_soup, self.season, self.team)
+        team_misc_team_record, team_misc_lg_rank_record = team_misc_table.get_records()
+        if not session.query(TeamMiscTeamRecord).filter(TeamMiscTeamRecord._Season==team_misc_team_record._Season, TeamMiscTeamRecord._abbreviation==team_misc_team_record._abbreviation, TeamMiscTeamRecord._created_at==team_misc_team_record._created_at).all():
+            session.add(team_misc_team_record)
+        if not session.query(TeamMiscLgRankRecord).filter(TeamMiscLgRankRecord._Season==team_misc_lg_rank_record._Season, TeamMiscLgRankRecord._abbreviation==team_misc_lg_rank_record._abbreviation, TeamMiscLgRankRecord._created_at==team_misc_lg_rank_record._created_at).all():
+            session.add(team_misc_lg_rank_record)
+        session.commit()
 
         # ==========================================================================================
 
         # # PerGame
-        # # 最初に更新すべき _Season, _abbreviation, _Player を消してから
-        # per_game_soup = soup.find('div', id='all_per_game').find('tbody')
-        # per_game_table = PerGameTable(per_game_soup, self.season, self.team)
-        # for record in per_game_table.get_records():
-        #     if not session.query(PerGameRecord).filter(PerGameRecord._Season==record._Season, PerGameRecord._abbreviation==record._abbreviation, PerGameRecord._Player==record._Player).all():
-        #         print(record.__dict__.items())
-        #         session.add(record)
-        #         session.commit()
+        # 最初に更新すべき _Season, _abbreviation, _Player を消してから
+        per_game_soup = soup.find('div', id='all_per_game').find('tbody')
+        per_game_table = PerGameTable(per_game_soup, self.season, self.team)
+        for record in per_game_table.get_records():
+            if not session.query(PerGameRecord).filter(PerGameRecord._Season==record._Season, PerGameRecord._abbreviation==record._abbreviation, PerGameRecord._Player==record._Player).all():
+                print(record.__dict__.items())
+                session.add(record)
+                session.commit()
 
         # Totals
-        # # 最初に更新すべき _Season, _abbreviation, _Player を消してから
-        # totals_soup = soup.find('div', id='div_totals').find('tbody')
-        # totals_table = TotalsTable(totals_soup, self.season, self.team)
-        # for record in totals_table.get_records():
-        #     if not session.query(TotalsRecord).filter(TotalsRecord._Season==record._Season, TotalsRecord._abbreviation==record._abbreviation, TotalsRecord._Player==record._Player).all():
-        #         session.add(record)
-        #         session.commit()
+        # 最初に更新すべき _Season, _abbreviation, _Player を消してから
+        totals_soup = soup.find('div', id='div_totals').find('tbody')
+        totals_table = TotalsTable(totals_soup, self.season, self.team)
+        for record in totals_table.get_records():
+            if not session.query(TotalsRecord).filter(TotalsRecord._Season==record._Season, TotalsRecord._abbreviation==record._abbreviation, TotalsRecord._Player==record._Player).all():
+                session.add(record)
+                session.commit()
 
-        # # Per 36 Minutes
-        # per_36_minutes_soup = soup.find('div', id='div_per_minute').find('tbody')
-        # per_36_minutes_table = Per36MinutesTable(per_36_minutes_soup, self.season, self.team)
-        # for record in per_36_minutes_table.get_records():
-        #     if not session.query(Per36MinutesRecord).filter(Per36MinutesRecord._Season==record._Season, Per36MinutesRecord._abbreviation==record._abbreviation, Per36MinutesRecord._Player==record._Player).all():
-        #         session.add(record)
-        #         session.commit()
+        # Per 36 Minutes
+        per_36_minutes_soup = soup.find('div', id='div_per_minute').find('tbody')
+        per_36_minutes_table = Per36MinutesTable(per_36_minutes_soup, self.season, self.team)
+        for record in per_36_minutes_table.get_records():
+            if not session.query(Per36MinutesRecord).filter(Per36MinutesRecord._Season==record._Season, Per36MinutesRecord._abbreviation==record._abbreviation, Per36MinutesRecord._Player==record._Player).all():
+                session.add(record)
+                session.commit()
 
-        # # Per 100 poss
+        # Per 100 poss
         per_100_poss_soup = soup.find('div', id='div_per_poss').find('tbody')
+        per_100_poss_table = Per100PossTable(per_100_poss_soup, self.season, self.team)
+        for record in per_100_poss_table.get_records():
+            if not session.query(Per100PossRecord).filter(Per100PossRecord._Season==record._Season, Per100PossRecord._abbreviation==record._abbreviation, Per100PossRecord._Player==record._Player).all():
+                session.add(record)
+                session.commit()
 
-        # # Advanced
-        # advanced_soup = soup.find('div', id='div_advanced').find('tbody')
+
+        # Advanced
+        advanced_soup = soup.find('div', id='div_advanced').find('tbody')
+        advanced_table = AdvancedTable(advanced_soup, self.season, self.team)
+        for record in advanced_table.get_records():
+            if not session.query(AdvancedRecord).filter(AdvancedRecord._Season==record._Season, AdvancedRecord._abbreviation==record._abbreviation, AdvancedRecord._Player==record._Player).all():
+                session.add(record)
+                session.commit()                
 
         # # Play by Play
         # play_by_play_soup = soup.find('div', id='div_pbp').find('tbody')
@@ -645,6 +663,8 @@ class PerGameTable:
     def get_records(self):
         for _tr in self.table_soup.find_all('tr'):
             td_list = [_.text for _ in _tr.find_all('td')]
+            if not td_list:
+                continue
             info = {k: v for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
@@ -701,6 +721,8 @@ class TotalsTable:
     def get_records(self):
         for _tr in self.table_soup.find_all('tr'):
             td_list = [_.text for _ in _tr.find_all('td')]
+            if not td_list:
+                continue
             info = {k: v for k, v in zip(self._keys, td_list)}
             print("=============================================-")
             print(info)
@@ -758,6 +780,8 @@ class Per36MinutesTable:
     def get_records(self):
         for _tr in self.table_soup.find_all('tr'):
             td_list = [_.text for _ in _tr.find_all('td')]
+            if not td_list:
+                continue
             info = {k: v for k, v in zip(self._keys, td_list)}
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
@@ -807,24 +831,31 @@ class Per100PossTable:
     table_soup: Any
     season: str
     team: Team
-    _keys = ['_Player', '_Age', '_G', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_2P', '_2PA', '_2P_percent', '_eFG_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_tmp', '_ORtg', '_DRtg']
+    _keys = ['_Player', '_Age', '_G', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_2P', '_2PA', '_2P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS', '_tmp', '_ORtg', '_DRtg']
 
     def get_records(self):
         for _tr in self.table_soup.find_all('tr'):
             td_list = [_.text for _ in _tr.find_all('td')]
+            if not td_list:
+                continue
             info = {k: v for k, v in zip(self._keys, td_list)}
-            del info['_tmp']
             info['_Season'] = self.season
             info['_abbreviation'] = self.team.abbreviation
-            info['_created_at'] = time.strtime('%a-%b-%d')
-            record = Per100PossRecord(info.__dict__.items())
+            del info['_tmp']
+            del_target_set = set()
+            for k, v in info.items():
+                if v!=0. and not v:
+                    del_target_set.add(k)
+            for k in del_target_set:
+                del info[k]
+            record = Per100PossRecord(**info)
             yield record
 
 class Per100PossRecord(Base):
     __tablename__ = f'team_stats__per100_poss'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
-    _Player = Column(String(120))
+    _Player = Column(String(120), primary_key=True)
     _Age = Column(Integer)
     _G = Column(Integer)
     _GS = Column(Integer)
@@ -838,7 +869,6 @@ class Per100PossRecord(Base):
     _2P = Column(Float)
     _2PA = Column(Float)
     _2P_percent = Column(Float)
-    _eFG_percent = Column(Float)
     _FT = Column(Float)
     _FTA = Column(Float)
     _FT_percent = Column(Float)
@@ -853,7 +883,6 @@ class Per100PossRecord(Base):
     _PTS = Column(Float)
     _ORtg = Column(Integer)
     _DRtg = Column(Integer)
-    _created_at = Column(String(120), primary_key=True)
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @dataclass
@@ -866,20 +895,27 @@ class AdvancedTable:
     def get_records(self):
         for _tr in self.table_soup.find_all('tr'):
             td_list = [_.text for _ in _tr.find_all('td')]
+            if not td_list:
+                continue
             info = {k: v for k, v in zip(self._keys, td_list)}
             del info['_tmp']
             del info['__tmp']
+            del_target_set = set()
+            for k, v in info.items():
+                if v!=0. and not v:
+                    del_target_set.add(k)
+            for k in del_target_set:
+                del info[k]
             info['_Season'] = self.season
-            info['_abbreviation'] = self.team.abbreviation
-            info['_created_at'] = time.strtime('%a-%b-%d')
-            record = AdvancedRecord(info.__dict__.items())
+            info['_abbreviation'] = self.team.abbreviation            
+            record = AdvancedRecord(**info)
             yield record
 
 class AdvancedRecord(Base):
     __tablename__ = f'team_stats__advanced'
     _Season = Column(String(120), primary_key=True)
     _abbreviation = Column(String(120), primary_key=True)
-    _Player = Column(String(120))
+    _Player = Column(String(120), primary_key=True)
     _Age = Column(Integer)
     _G = Column(Integer)
     _MP = Column(Integer)
@@ -903,7 +939,6 @@ class AdvancedRecord(Base):
     _DBPM = Column(Float) 
     _BPM = Column(Float) 
     _VORP = Column(Float) 
-    _created_at = Column(String(120), primary_key=True)
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @dataclass
@@ -953,10 +988,10 @@ class PlayByPlayRecord(Base):
 if __name__ == '__main__':
     _Season = 2021
     for team in TEAMS_SET:
-        team_page = TeamPage(team, _Season)
-
-        team_page.create_table()
-        team_page.update_latest_records()
+        if team.abbreviation == "HOU":
+            team_page = TeamPage(team, _Season)
+            team_page.create_table()
+            team_page.update_latest_records()
 
 
 
