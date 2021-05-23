@@ -927,11 +927,14 @@ class PlayByPlayRecordPlayoffs(Base):
 
 
 if __name__ == '__main__':
-    for index, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._url).all():
-        # time.sleep(4)
-        if index <= 4221:
+    for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
+
+        is_active_player = None
+        for _ in session.execute(f'SELECT * FROM NBA_teams.team_stats__roster WHERE _Player="{_player}"'):# WHERE _Tm == "WAS"');#_Player == "{_player}";')
+            is_active_player = _
+        if not is_active_player:
             continue
-        
+
         print(index, player_overview_url)
         # 1人のプレイヤーを示す
         overview_page = EachPlayerOverViewPage(index, player_overview_url)
