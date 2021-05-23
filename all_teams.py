@@ -49,14 +49,7 @@ class TeamPage():
     def update_latest_records(self):
         soup = get_soup_by_url(self.url, True)
 
-        # 削除プロトコル
-        # session.query(PerGameRecord).filter(PerGameRecord._Season == CURRENT_SEASON).delete()
-        # session.query(TotalsRecord).filter(TotalsRecord._Season == CURRENT_SEASON).delete()
-        # session.query(Per36MinutesRecord).filter(Per36MinutesRecord._Season == CURRENT_SEASON).delete()
-        # session.query(Per100PossRecord).filter(Per100PossRecord._Season == CURRENT_SEASON).delete()
-        # session.query(AdvancedRecord).filter(AdvancedRecord._Season == CURRENT_SEASON).delete()
-        # session.query(PlayByPlayRecord).filter(PlayByPlayRecord._Season == CURRENT_SEASON).delete()
-        # session.commit()
+        
         
         # # team info
         # # 更新なし
@@ -1005,6 +998,16 @@ class PlayByPlayRecord(Base):
     
 if __name__ == '__main__':
     _Season = 2021
+    # 削除プロトコル
+    session.query(PerGameRecord).filter(PerGameRecord._Season == CURRENT_SEASON).delete()
+    session.query(TotalsRecord).filter(TotalsRecord._Season == CURRENT_SEASON).delete()
+    session.query(Per36MinutesRecord).filter(Per36MinutesRecord._Season == CURRENT_SEASON).delete()
+    session.query(Per100PossRecord).filter(Per100PossRecord._Season == CURRENT_SEASON).delete()
+    session.query(AdvancedRecord).filter(AdvancedRecord._Season == CURRENT_SEASON).delete()
+    session.query(PlayByPlayRecord).filter(PlayByPlayRecord._Season == CURRENT_SEASON).delete()
+    session.commit()
+
+
     for team in TEAMS_SET:
     
         team_page = TeamPage(team, _Season)
