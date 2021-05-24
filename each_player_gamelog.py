@@ -279,10 +279,6 @@ if __name__ == '__main__':
             # update table
             each_player_game_log_page.update_each_player_gamelog_tables()
         
-        # num_tmp_dir_files = len(os.path)
-        # if len(os.listdir(TMPDIR)) >= 100:
-        #     index_dir += 1
-        #     TMPDIR = ROOT / str(index_dir)
-        #     if not TMPDIR.exists():
-        #         os.mkdir(TMPDIR)
-        #     os.environ['TMPDIR'] = str(TMPDIR)
+
+    
+    

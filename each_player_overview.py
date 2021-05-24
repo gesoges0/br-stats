@@ -938,8 +938,8 @@ if __name__ == '__main__':
         print(index, player_overview_url)
         # 1人のプレイヤーを示す
         overview_page = EachPlayerOverViewPage(index, player_overview_url)
-        overview_page.create_tables('per_games')
-        overview_page.create_tables('totals')
+        # overview_page.create_tables('per_games')
+        # overview_page.create_tables('totals')
         overview_page.update_each_player_tables()
 
 

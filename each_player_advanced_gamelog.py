@@ -220,29 +220,52 @@ class PlayoffsAdvancedRecord(Base):
 
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
 
-    for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
+#     for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
 
-        # tm が異なってもGameLogには1シーズン情報で出てくるので.first()でOK
-        for res in session.query(distinct(PerGameRecordRegularSeason._Season)).filter(PerGameRecordRegularSeason.id == index).all():
-            _Season = res[0]
-            year = str(int(_Season.split('-')[0]) + 1 )
-            game_log_url = player_overview_url.replace('.html', f'/gamelog-advanced/{year}')
+#         # tm が異なってもGameLogには1シーズン情報で出てくるので.first()でOK
+#         for res in session.query(distinct(PerGameRecordRegularSeason._Season)).filter(PerGameRecordRegularSeason.id == index).all():
+#             _Season = res[0]
+#             year = str(int(_Season.split('-')[0]) + 1 )
+#             game_log_url = player_overview_url.replace('.html', f'/gamelog-advanced/{year}')
 
-            if _Season != CURRENT_SEASON:
-                continue
+#             if _Season != CURRENT_SEASON:
+#                 continue
 
-            # 選手で収集
-            # if _player != 'Jason Tytum':
-            #     continue
+#             # 選手で収集
+#             # if _player != 'Jason Tytum':
+#             #     continue
 
-            each_player_advanced_game_log_page = EachPlayerAdvancedGameLogPage(index, _Season, game_log_url)
+#             each_player_advanced_game_log_page = EachPlayerAdvancedGameLogPage(index, _Season, game_log_url)
             
-            # create table
-            # each_player_advanced_game_log_page.create_tables('regular_season')
-            # each_player_advanced_game_log_page.create_tables('playoffs')
+#             # create table
+#             # each_player_advanced_game_log_page.create_tables('regular_season')
+#             # each_player_advanced_game_log_page.create_tables('playoffs')
 
-            # update table
-            each_player_advanced_game_log_page.update_each_player_advanced_gamelog_tables()
+#             # update table
+#             each_player_advanced_game_log_page.update_each_player_advanced_gamelog_tables()
+
+
+# 最初にgamelogを更新するパターン
+# レギュラーシーズンやプレイオフの開始など前日に間が空くと正しく更新されないため、上の更新則を使う
+if __name__ == '__main__':
+    
+    # Gamelogの最も最近の日
+    # res = session.execute('SELECT * FROM each_player_gamelog_playoffs_all_times_union WHERE _Date = (SELECT MAX(_Date) FROM each_player_gamelog_playoffs_all_times_union)')
+    the_day_before = 2
+    res = session.execute(f'SELECT * FROM each_player_gamelog_playoffs_all_times_union as a INNER JOIN (SELECT _Date FROM each_player_gamelog_playoffs_all_times_union GROUP BY _Date ORDER BY _Date DESC LIMIT {the_day_before}) as e ON a._Date=e._Date;')
+    for record in res:
+        index = record.id
+        _Season = record._Season
+        year = str(int(_Season.split('-')[0]) + 1 )
+        # get player overview url
+        for _ in session.query(AllPlayersRecord._url).filter(AllPlayersRecord.id==index).all():
+            player_overview_url = _[0]
+            game_log_url = player_overview_url.replace('.html', f'/gamelog/{year}')
+        
+        # update
+        each_player_advanced_game_log_page = EachPlayerAdvancedGameLogPage(index, _Season, game_log_url)
+        each_player_advanced_game_log_page.update_each_player_advanced_gamelog_tables()
+
