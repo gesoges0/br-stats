@@ -135,7 +135,7 @@ class TeamPage():
 
         # # PerGame
         # 最初に更新すべき _Season, _abbreviation, _Player を消してから
-        per_game_soup = soup.find('div', id='all_per_game').find('tbody')
+        per_game_soup = soup.find('div', id='all_per_game-playoffs_per_game').find('tbody')
         per_game_table = PerGameTable(per_game_soup, self.season, self.team)
         for record in per_game_table.get_records():
             if not session.query(PerGameRecord).filter(PerGameRecord._Season==record._Season, PerGameRecord._abbreviation==record._abbreviation, PerGameRecord._Player==record._Player).all():
@@ -1011,7 +1011,7 @@ if __name__ == '__main__':
     for team in TEAMS_SET:
     
         team_page = TeamPage(team, _Season)
-        team_page.create_table()
+        # team_page.create_table()
         team_page.update_latest_records()
 
 

@@ -35,6 +35,12 @@ keys_dict = { 28: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_
             29: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_3P', '_3PA', '_3P_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS', '_GmSc', '_PlusMinus'],
             25: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_FG', '_FGA', '_FG_percent', '_FT', '_FTA', '_FT_percent', '_ORB', '_DRB', '_TRB', '_AST', '_STL', '_BLK', '_TOV', '_PF', '_PTS', '_GmSc'],
             8: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL']}
+            
+def create_session(db_name):
+    DATABASE = f'mysql://{USER}:{PASSWD}@{HOST}/{db_name}?charset=utf8'
+    ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
+    session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
+    return session
 
 class EachPlayerGameLogPage():
     id: int
@@ -241,44 +247,53 @@ class PlayoffsRecord(Base):
 
 if __name__ == '__main__':
 
-    # dt_now = datetime.now().strftime('%Y%m%d')
-    # ROOT = Path('/mnt/da1fb3ab-8bd1-4b98-983e-b45899e50c48/ChromeCache/') / dt_now
-    # if not ROOT.exists():
-    #     os.mkdir(ROOT)
-    #     index_dir = 0
-    # else: 
-    #     index_dir = len(os.listdi r(ROOT))
-    # TMPDIR = ROOT / str(index_dir)
-    # if not TMPDIR.exists():
-    #     os.mkdir(TMPDIR)
-    # os.environ['TMPDIR'] = str(TMPDIR)
+    # # 初期時の更新
+    # session_NBA3 = create_session('NBA3')
+    # session_overview = create_session('NBA_overview_test')
+    # for index, _player, player_overview_url in session_NBA3.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
+        
+    #     if index <= 240:
+    #         continue
 
-    for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
+    #     # tm が異なってもGameLogには1シーズン情報で出てくるので.first()でOK
+    #     for res in session_overview.query(distinct(PerGameRecordRegularSeason._Season)).filter(PerGameRecordRegularSeason.id == index).all():
+    #         _Season = res[0]
+    #         year = str(int(_Season.split('-')[0]) + 1 )
+    #         game_log_url = player_overview_url.replace('.html', f'/gamelog/{year}')
+            
+    #         each_player_game_log_page = EachPlayerGameLogPage(index, _Season, game_log_url)
+            
+    #         # create table
+    #         # each_player_game_log_page.create_tables('regular_season')
+    #         # each_player_game_lg_page.create_tables('playoffs')
 
-        # if index < 3996:#3437:#2506:#1686:#1403:     
+    #         # update table
+    #         each_player_game_log_page.update_each_player_gamelog_tables()
+            
+        
+
+    # # 今シーズンのみを更新したいとき
+    session_overview = create_session('NBA_overview_test')
+    session_NBA3 = create_session('NBA3')
+    for index, _player, player_overview_url in session_NBA3.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
+
+        # if index < 4920:
         #     continue
 
         # tm が異なってもGameLogには1シーズン情報で出てくるので.first()でOK
-        for res in session.query(distinct(PerGameRecordRegularSeason._Season)).filter(PerGameRecordRegularSeason.id == index).all():
+        for res in session_overview.query(distinct(PerGameRecordRegularSeason._Season)).filter(PerGameRecordRegularSeason.id == index).all():
             _Season = res[0]
             year = str(int(_Season.split('-')[0]) + 1 )
             game_log_url = player_overview_url.replace('.html', f'/gamelog/{year}')
+            
 
             if _Season != CURRENT_SEASON:
                 continue
 
-            # if _player != 'Jason Tytum':
-            #     continue
-
             each_player_game_log_page = EachPlayerGameLogPage(index, _Season, game_log_url)
             
-            # create table
-            # each_player_game_log_page.create_tables('regular_season')
-            # each_player_game_log_page.create_tables('playoffs')
-
             # update table
             each_player_game_log_page.update_each_player_gamelog_tables()
-        
-
-    
+            
+            
     

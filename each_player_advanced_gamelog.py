@@ -25,6 +25,11 @@ session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=EN
 OPTION = 'all_times' # 2020-21
 CURRENT_SEASON = '2020-21'
 
+def create_session(db_name):
+    DATABASE = f'mysql://{USER}:{PASSWD}@{HOST}/{db_name}?charset=utf8'
+    ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
+    session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
+    return session
 
 keys_dict = {
             16: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_TS_percent', '_ORB_percent', '_DRB_percent', '_TRB_percent', '_AST_percent', '_ORtg', '_DRtg'],
@@ -36,6 +41,7 @@ keys_dict = {
             23: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL', '_GS', '_MP', '_TS_percent', '_eFG_percent', '_ORB_percent', '_DRB_percent', '_TRB_percent', '_AST_percent', '_STL_percent', '_BLK_percent', '_TOV_percent', '_USG_percent', '_ORtg', '_DRtg', '_GmSc', '_BPM'], 
             8: ['_G', '_Date', '_Age', '_Tm', '_at', '_Opp', '_WL']}
 # 19はあとから足したので怪しいかも
+
 
 
 class EachPlayerAdvancedGameLogPage():
@@ -254,14 +260,15 @@ if __name__ == '__main__':
     
     # Gamelogの最も最近の日
     # res = session.execute('SELECT * FROM each_player_gamelog_playoffs_all_times_union WHERE _Date = (SELECT MAX(_Date) FROM each_player_gamelog_playoffs_all_times_union)')
-    the_day_before = 2
+    the_day_before = 10
+    session_NBA3 = create_session('NBA3')
     res = session.execute(f'SELECT * FROM each_player_gamelog_playoffs_all_times_union as a INNER JOIN (SELECT _Date FROM each_player_gamelog_playoffs_all_times_union GROUP BY _Date ORDER BY _Date DESC LIMIT {the_day_before}) as e ON a._Date=e._Date;')
     for record in res:
         index = record.id
         _Season = record._Season
         year = str(int(_Season.split('-')[0]) + 1 )
         # get player overview url
-        for _ in session.query(AllPlayersRecord._url).filter(AllPlayersRecord.id==index).all():
+        for _ in session_NBA3.query(AllPlayersRecord._url).filter(AllPlayersRecord.id==index).all():
             player_overview_url = _[0]
             game_log_url = player_overview_url.replace('.html', f'/gamelog/{year}')
         

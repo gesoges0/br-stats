@@ -23,6 +23,11 @@ ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
 session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
 CURRENT_SEASON = '2020-21'
 
+def create_session(db_name):
+    DATABASE = f'mysql://{USER}:{PASSWD}@{HOST}/{db_name}?charset=utf8'
+    ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
+    session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
+    return session
 
 class EachPlayerOverViewPage():
     id: int
@@ -901,22 +906,26 @@ class PlayByPlayRecordPlayoffs(Base):
 
 if __name__ == '__main__':
     Base.metadata.create_all(bind=ENGINE)
-    for index, _player, player_overview_url in session.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
-
-        # ここのコメントアウトを戻します
+    session_NBA3 = create_session('NBA3')
+    for index, _player, player_overview_url in session_NBA3.query(AllPlayersRecord.id, AllPlayersRecord._player, AllPlayersRecord._url).all():
+        
+        # # ここのコメントアウトを戻します
         # is_active_player = None
         # for _ in session.execute(f'SELECT * FROM NBA_teams.team_stats__roster WHERE _Player="{_player}"'):
         #     is_active_player = _
         # if not is_active_player:
         #     continue
 
-        if index < 3836:
-            continue
+        # # if 2779 <= index < 3441:
+        # #     continue
 
 
-        # 1人のプレイヤーを示す
-        overview_page = EachPlayerOverViewPage(index, player_overview_url)
-        # overview_page.create_tables('per_games')
-        # overview_page.create_tables('totals')
-        overview_page.update_each_player_tables()
+        # # 1人のプレイヤーを示す
+        # overview_page = EachPlayerOverViewPage(index, player_overview_url)
+        # # overview_page.create_tables('per_games')
+        # # overview_page.create_tables('totals')
+        # overview_page.update_each_player_tables()
 
+        a = list(session_NBA3.execute(f'SELECT * FROM NBA3.all_players WHERE _player="{_player}"'))
+        # if not a:
+        print(a)

@@ -1,0 +1,30 @@
+-----------------------------
+1-2
+['Luka Dončić', 'John Williamson', 'George Mikan', 'Kareem Abdul-Jabbar', 'Julius Erving', 'Derrick Rose', 'Gary Brokaw', 'Wilt Chamberlain', 'Anthony Davis', 'Chris Paul']
+-----------------------------
+2-3
+['Ja Morant', 'George Mikan', 'Bob Lanier', 'Dan Issel', 'Kareem Abdul-Jabbar', 'Chris Paul', 'Devin Booker', 'Julius Erving', 'Wilt Chamberlain', 'Luka Dončić']
+-----------------------------
+3-4
+['Wilt Chamberlain', 'LeBron James', 'Bernard King', 'Kelly Tripucka', 'Bob McAdoo', 'Kareem Abdul-Jabbar', 'George Mikan', 'Kevin Johnson', 'Ja Morant', 'Julius Erving']
+-----------------------------
+4-5
+['George Gervin', 'Bob McAdoo', 'Luka Dončić', 'Wilt Chamberlain', 'Rick Barry', 'LeBron James', 'Anthony Davis', 'Kareem Abdul-Jabbar', 'George Mikan', 'Terry Cummings']
+-----------------------------
+5-6
+['Michael Jordan', 'Rick Barry', 'Kareem Abdul-Jabbar', 'Paul Pierce', 'LeBron James', 'George Mikan', 'Earl Monroe', 'Anthony Davis', 'George Gervin', 'Wilt Chamberlain']
+-----------------------------
+6-7
+['Michael Jordan', 'Bob McAdoo', 'Luka Dončić', 'Kareem Abdul-Jabbar', 'George Gervin', 'LeBron James', 'Rick Barry', 'Anthony Davis', 'Wilt Chamberlain', 'George Mikan']
+-----------------------------
+7-8
+['Kareem Abdul-Jabbar', 'Bob McAdoo', 'George Mikan', 'Luka Dončić', 'Anthony Davis', 'George Gervin', 'Wilt Chamberlain', 'LeBron James', 'Michael Jordan', 'Rick Barry']
+-----------------------------
+8-9
+['Wilt Chamberlain', 'Anthony Davis', 'Luka Dončić', 'Bob McAdoo', 'Michael Jordan', 'Kareem Abdul-Jabbar', 'LeBron James', 'George Mikan', 'Rick Barry', 'George Gervin']
+-----------------------------
+9-10
+['Luka Dončić', 'Michael Jordan', 'Rick Barry', 'Kareem Abdul-Jabbar', 'Bob McAdoo', 'George Gervin', 'Wilt Chamberlain', 'George Mikan', 'LeBron James', 'Anthony Davis']
+-----------------------------
+10-11
+['Bob McAdoo', 'Wilt Chamberlain', 'Rick Barry', 'Michael Jordan', 'George Gervin', 'George Mikan', 'Kareem Abdul-Jabbar', 'Anthony Davis', 'LeBron James', 'Luka Dončić']

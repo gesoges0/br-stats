@@ -13,6 +13,7 @@ from typing import Any, List
 
 Base = declarative_base()
 USER, PASSWD = get_mysql_pass()
+DB_NAME = 'NBA3'
 DATABASE = f'mysql://{USER}:{PASSWD}@{HOST}/{DB_NAME}?charset=utf8'
 ENGINE = create_engine(DATABASE, encoding='utf-8', echo=True)
 session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=ENGINE))
@@ -32,14 +33,9 @@ class AllPlayersPage():
             url = f'https://www.basketball-reference.com/players/{alpha}/'
             all_players_table = AllPlayersTable(url)
             for player in all_players_table.get_all_players_in_a_page():
-                if session.query(AllPlayersRecord).filter(AllPlayersRecord._player == player._player).first():
-                    continue
-                try:
+                if not session.query(AllPlayersRecord).filter(AllPlayersRecord._player == player._player, AllPlayersRecord._from == player._from, AllPlayersRecord._to == player._to).all():
                     session.add(player)
-                    session.commit()
-                except Exception as e:
-                    session.rollback()
-                    
+                    session.commit()    
 
 class AllPlayersTable():
     """Web側のtable"""
@@ -73,7 +69,7 @@ class AllPlayersRecord(Base):
     """
     __tablename__ = 'all_players'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    _player = Column(String(120), unique=True)
+    _player = Column(String(120))# , unique=True) <---- Mike James の件で消した
     _from = Column(Integer)
     _to = Column(Integer)
     _pos = Column(String(10))
@@ -95,3 +91,8 @@ class AllPlayersRecord(Base):
         self._colleges = _colleges
         self._url = _url
         self._url_for_player = _url_for_player
+
+
+if __name__ == '__main__':
+    all_players_page = AllPlayersPage()
+    all_players_page.update_all_players_table()
