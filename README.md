@@ -1,7 +1,8 @@
 # NBA-stats
 
 ## What is this?
-To analyze NBA stats, build MySQL database
+Build MySQL database to analyze NBA stats.
+You can build stats database such a [BASKETBALL REFERENCE](https://www.basketball-reference.com/players/j/jokicni01/gamelog/2021).
 ![MySQL](./images/stats_info.png)
 
 ## Usage
