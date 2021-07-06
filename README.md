@@ -24,6 +24,7 @@ python each_player_advanced_gamelog.py
 
 ### Analyze Stats
 ```
+		# If you analyze triple double in regular season of all times, execute this script to output csv that is acceptable in flourish.
 python analysis/HISTORY_TplDbl.py
 ```
 ![output](./images/HISTORY_TplDbl.gif)
