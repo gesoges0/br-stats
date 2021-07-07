@@ -1,4 +1,4 @@
-# NBA-stats
+# Basketball Reference Stats
 
 ## What is this?
 Build MySQL database to analyze NBA stats.
